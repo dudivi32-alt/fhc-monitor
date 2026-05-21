@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>13家金控股價及法人買賣超</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", "PingFang TC", sans-serif;
+    margin: 0;
+    padding: 16px 20px 40px;
+    background: #ffffff;
+    color: #1a1a1a;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-bottom: 2px solid #e1e4e8;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    color: #0a3d62;
+  }
+  .meta {
+    color: #586069;
+    font-size: 12px;
+    text-align: right;
+  }
+  .meta .latest-date {
+    font-weight: 600;
+    color: #0a3d62;
+    font-size: 14px;
+  }
+  #status {
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+  #status.loading { background: #fff8e1; color: #8a6d00; }
+  #status.error { background: #ffe6e6; color: #b00020; }
+  #status.ok { background: #e6f7ec; color: #0a6e2a; }
+  #status.hidden { display: none; }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e1e4e8;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #586069;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tab-btn:hover { color: #0a3d62; }
+  .tab-btn.active {
+    color: #0a3d62;
+    border-bottom-color: #0a3d62;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .table-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 16px 0 8px;
+    color: #0a3d62;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .table-title .unit {
+    font-weight: 400;
+    font-size: 12px;
+    color: #586069;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: #fff;
+    margin-bottom: 8px;
+  }
+  th, td {
+    padding: 6px 8px;
+    text-align: right;
+    border-bottom: 1px solid #eef0f2;
+    white-space: nowrap;
+  }
+  th {
+    background: #f5f7fa;
+    color: #0a3d62;
+    font-weight: 600;
+    border-bottom: 2px solid #d4d9df;
+    text-align: right;
+    position: sticky;
+    top: 0;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th.stock-col, td.stock-col { text-align: left; min-width: 110px; }
+  tr:hover td { background: #f9fafb; }
+  td.num { font-variant-numeric: tabular-nums; }
+  .pos { color: #c0392b; }   /* 紅: 上漲/買超 */
+  .neg { color: #27713a; }   /* 綠: 下跌/賣超 */
+  .neu { color: #586069; }
+  .code-tag {
+    display: inline-block;
+    background: #eef0f2;
+    color: #586069;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-right: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .summary-row td {
+    background: #f5f7fa;
+    font-weight: 600;
+    border-top: 2px solid #d4d9df;
+    border-bottom: none;
+  }
+  .footer {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid #e1e4e8;
+    color: #6a737d;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .footer .src { color: #0a3d62; }
+  .hidden { display: none !important; }
+  .skeleton-row td { color: #c8ccd1; }
+  /* 指數區塊 */
+  .index-card {
+    background: linear-gradient(135deg, #f5f9fd 0%, #eef4fa 100%);
+    border: 1px solid #d4dde6;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .index-card h2 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: #0a3d62;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .index-card h2 .unit { font-weight: 400; font-size: 11px; color: #586069; }
+  .index-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .index-table th {
+    background: transparent;
+    color: #0a3d62;
+    text-align: center;
+    border-bottom: 1px solid #c4ccd4;
+    padding: 6px 8px;
+  }
+  .index-table td {
+    text-align: center;
+    padding: 8px 6px;
+    border-bottom: 1px dashed #d4dde6;
+    font-variant-numeric: tabular-nums;
+  }
+  .index-table td:first-child { text-align: left; font-weight: 600; color: #0a3d62; }
+  .index-table .val { font-size: 16px; font-weight: 700; }
+  .index-table .chg { font-size: 12px; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>13家金控　收盤價及法人買賣超</h1>
+  <div class="meta">
+    <div>最新交易日：<span class="latest-date" id="latestDate">—</span></div>
+    <div>每日下午 5 點後請重新整理頁面取得當日資料</div>
+  </div>
+</header>
+
+<div id="status" class="loading">資料載入中…正在從 FinMind 抓取 13 檔金控近 10 個交易日資料</div>
+
+<!-- 加權指數 + 金融保險類指數 -->
+<div class="index-card">
+  <h2>📈 大盤指數　<span class="unit">收盤｜當日 / 3 日 / 5 日漲跌</span></h2>
+  <table class="index-table" id="indexTable">
+    <thead>
+      <tr>
+        <th style="text-align:left">指數</th>
+        <th>最新收盤</th>
+        <th>當日</th>
+        <th>3日</th>
+        <th>5日</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>加權指數</td><td colspan="4" style="color:#586069">載入中…</td></tr>
+      <tr><td>金融保險類指數</td><td colspan="4" style="color:#586069">載入中…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-period="1">當日</button>
+  <button class="tab-btn" data-period="3">三日累計</button>
+  <button class="tab-btn" data-period="5">五日累計</button>
+</nav>
+
+<section class="panel active" data-panel="1">
+  <div class="table-title">📊 當日　法人買賣超　<span class="unit">張數（1張＝1,000股）</span></div>
+  <table class="shares-table" data-period="1"></table>
+  <div class="table-title">💰 當日　法人買賣超　<span class="unit">金額（千元，以當日收盤價估算）</span></div>
+  <table class="amount-table" data-period="1"></table>
+</section>
+
+<section class="panel" data-panel="3">
+  <div class="table-title">📊 三日累計　法人買賣超　<span class="unit">張數（近 3 個交易日加總）</span></div>
+  <table class="shares-table" data-period="3"></table>
+  <div class="table-title">💰 三日累計　法人買賣超　<span class="unit">金額（千元，每日張數 × 當日收盤價加總）</span></div>
+  <table class="amount-table" data-period="3"></table>
+</section>
+
+<section class="panel" data-panel="5">
+  <div class="table-title">📊 五日累計　法人買賣超　<span class="unit">張數（近 5 個交易日加總）</span></div>
+  <table class="shares-table" data-period="5"></table>
+  <div class="table-title">💰 五日累計　法人買賣超　<span class="unit">金額（千元，每日張數 × 當日收盤價加總）</span></div>
+  <table class="amount-table" data-period="5"></table>
+</section>
+
+<div class="footer">
+  資料來源：<span class="src">FinMind</span>（TaiwanStockPrice、TaiwanStockInstitutionalInvestorsBuySell）｜
+  漲跌% 為當日／期間相對前日／期初收盤價變化｜
+  自營商 = 自行買賣 + 避險合計｜
+  外資不含外資自營商（FinMind Foreign_Investor 欄位）｜
+  金額單位為千元（張數 × 收盤價）。<br>
+  ※ 每日 17:00 後 TWSE 法人資料才會更新；瀏覽器 F5 即可重抓。
+</div>
+
+<script>
+// ==== 13家金控設定 ====
+const FHC_STOCKS = [
+  { code: '2880', name: '華南金' },
+  { code: '2881', name: '富邦金' },
+  { code: '2882', name: '國泰金' },
+  { code: '2883', name: '凱基金' },
+  { code: '2884', name: '玉山金' },
+  { code: '2885', name: '元大金' },
+  { code: '2886', name: '兆豐金' },
+  { code: '2887', name: '台新新光金' },
+  { code: '2889', name: '國票金' },
+  { code: '2890', name: '永豐金' },
+  { code: '2891', name: '中信金' },
+  { code: '2892', name: '第一金' },
+  { code: '5880', name: '合庫金' },
+];
+
+// ==== 工具函式 ====
+function fmtDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function nDaysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
+}
+function fmtInt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString('en-US');
+}
+function fmtSigned(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  const rounded = Math.round(n);
+  if (rounded === 0) return '0';
+  return (rounded > 0 ? '+' : '') + rounded.toLocaleString('en-US');
+}
+function fmtPrice(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return n.toFixed(2);
+}
+function fmtPct(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return (n > 0 ? '+' : '') + n.toFixed(2) + '%';
+}
+function classOfChange(n) {
+  if (n === null || n === undefined || isNaN(n) || n === 0) return 'neu';
+  return n > 0 ? 'pos' : 'neg';
+}
+
+// ==== 原生 fetch（FinMind 與 TWSE 皆已啟用 CORS） ====
+async function fetchJson(url) {
+  const res = await fetch(url, { mode: 'cors' });
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' for ' + url);
+  return await res.json();
+}
+
+// ==== 抓單一檔股票資料 ====
+async function fetchStock(code, startDate, endDate) {
+  const priceUrl = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${code}&start_date=${startDate}&end_date=${endDate}`;
+  const instUrl  = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id=${code}&start_date=${startDate}&end_date=${endDate}`;
+  const [price, inst] = await Promise.all([fetchJson(priceUrl), fetchJson(instUrl)]);
+  return { code, price: price.data || [], inst: inst.data || [] };
+}
+
+// ==== 將 inst 原始 rows 依日期彙整 ====
+function aggregateInstByDate(instRows) {
+  // {date: {foreign, trust, dealer, total}} 單位：股數
+  const byDate = {};
+  for (const r of instRows) {
+    const d = r.date;
+    if (!byDate[d]) byDate[d] = { foreign: 0, trust: 0, dealer: 0 };
+    const net = (r.buy || 0) - (r.sell || 0);
+    switch (r.name) {
+      case 'Foreign_Investor':
+      case 'Foreign_Dealer_Self':
+        byDate[d].foreign += net;
+        break;
+      case 'Investment_Trust':
+        byDate[d].trust += net;
+        break;
+      case 'Dealer_self':
+      case 'Dealer_Hedging':
+        byDate[d].dealer += net;
+        break;
+    }
+  }
+  for (const d in byDate) {
+    const x = byDate[d];
+    x.total = x.foreign + x.trust + x.dealer;
+  }
+  return byDate;
+}
+
+// ==== 主要資料計算 ====
+function computeMetrics(stockData) {
+  // stockData: { code, price[], inst[] }
+  // 排序 price by date asc
+  const allPrices = [...stockData.price].sort((a, b) => a.date.localeCompare(b.date));
+  if (!allPrices.length) return null;
+  const instByDate = aggregateInstByDate(stockData.inst);
+
+  // 取「股價與法人都有資料」的交易日（法人通常 17:00 後才公布，這樣可避免當日法人為 0）
+  const prices = allPrices.filter(p => instByDate[p.date]);
+  if (!prices.length) {
+    // 退而求其次：法人尚未公布時，至少還能顯示股價
+    return {
+      code: stockData.code,
+      lastDate: allPrices[allPrices.length - 1].date,
+      noInst: true,
+      p1: null, p3: null, p5: null,
+    };
+  }
+  const idxLast = prices.length - 1;
+
+  function periodMetrics(n) {
+    // 取最近 n 個交易日
+    const slice = prices.slice(-n);
+    if (slice.length === 0) return null;
+    const first = slice[0];
+    const last = slice[slice.length - 1];
+    // 漲跌%：以 slice 之前那一天的收盤為基準
+    let pct = null;
+    const prevIdx = prices.length - 1 - n;
+    if (prevIdx >= 0) {
+      const prev = prices[prevIdx];
+      pct = ((last.close - prev.close) / prev.close) * 100;
+    } else if (slice[0].spread != null && (last.close - slice[0].spread) > 0 && n === 1) {
+      // 不足 n 天時，至少當日用 spread 推算
+      pct = (slice[0].spread / (slice[0].close - slice[0].spread)) * 100;
+    }
+    // 累計成交量(張)
+    const volumeShares = slice.reduce((s, p) => s + (p.Trading_Volume || 0), 0);
+    const volumeLots = volumeShares / 1000;
+
+    // 累計法人股數 / 金額
+    let foreign = 0, trust = 0, dealer = 0, total = 0;
+    let amtForeign = 0, amtTrust = 0, amtDealer = 0, amtTotal = 0;
+    for (const p of slice) {
+      const ins = instByDate[p.date];
+      if (!ins) continue;
+      foreign += ins.foreign;
+      trust   += ins.trust;
+      dealer  += ins.dealer;
+      total   += ins.total;
+      // 金額（元）= 股數 × 收盤價；再 / 1000 -> 千元
+      amtForeign += ins.foreign * p.close;
+      amtTrust   += ins.trust   * p.close;
+      amtDealer  += ins.dealer  * p.close;
+      amtTotal   += ins.total   * p.close;
+    }
+    return {
+      close: last.close,
+      pct,
+      volumeLots,
+      // 張數
+      foreignLots: foreign / 1000,
+      trustLots:   trust / 1000,
+      dealerLots:  dealer / 1000,
+      totalLots:   total / 1000,
+      // 金額(千元)
+      foreignKTWD: amtForeign / 1000,
+      trustKTWD:   amtTrust / 1000,
+      dealerKTWD:  amtDealer / 1000,
+      totalKTWD:   amtTotal / 1000,
+      lastDate: last.date,
+    };
+  }
+
+  return {
+    code: stockData.code,
+    lastDate: prices[idxLast].date,
+    priceOnlyDate: allPrices[allPrices.length - 1].date, // 最新有股價的日期（可能還沒法人）
+    p1: periodMetrics(1),
+    p3: periodMetrics(3),
+    p5: periodMetrics(5),
+  };
+}
+
+// ==== 渲染表格 ====
+function renderSharesTable(tableEl, rows, period) {
+  const header = `
+    <thead><tr>
+      <th class="stock-col">股票</th>
+      <th>外資(張)</th>
+      <th>投信(張)</th>
+      <th>自營商(張)</th>
+      <th>法人合計(張)</th>
+      <th>收盤價</th>
+      <th>${period === 1 ? '漲跌%' : period + '日漲跌%'}</th>
+      <th>${period === 1 ? '成交量(張)' : period + '日成交量(張)'}</th>
+    </tr></thead>`;
+  let body = '<tbody>';
+  let sumF=0, sumT=0, sumD=0, sumAll=0;
+  for (const r of rows) {
+    const m = r.metrics;
+    if (!m) {
+      body += `<tr class="skeleton-row"><td class="stock-col"><span class="code-tag">${r.code}</span>${r.name}</td>` +
+              '<td colspan="7">尚無資料</td></tr>';
+      continue;
+    }
+    sumF += m.foreignLots; sumT += m.trustLots; sumD += m.dealerLots; sumAll += m.totalLots;
+    body += `<tr>
+      <td class="stock-col"><span class="code-tag">${r.code}</span>${r.name}</td>
+      <td class="num ${classOfChange(m.foreignLots)}">${fmtSigned(m.foreignLots)}</td>
+      <td class="num ${classOfChange(m.trustLots)}">${fmtSigned(m.trustLots)}</td>
+      <td class="num ${classOfChange(m.dealerLots)}">${fmtSigned(m.dealerLots)}</td>
+      <td class="num ${classOfChange(m.totalLots)}"><b>${fmtSigned(m.totalLots)}</b></td>
+      <td class="num">${fmtPrice(m.close)}</td>
+      <td class="num ${classOfChange(m.pct)}">${fmtPct(m.pct)}</td>
+      <td class="num">${fmtInt(m.volumeLots)}</td>
+    </tr>`;
+  }
+  body += `<tr class="summary-row">
+    <td class="stock-col">13家合計</td>
+    <td class="num ${classOfChange(sumF)}">${fmtSigned(sumF)}</td>
+    <td class="num ${classOfChange(sumT)}">${fmtSigned(sumT)}</td>
+    <td class="num ${classOfChange(sumD)}">${fmtSigned(sumD)}</td>
+    <td class="num ${classOfChange(sumAll)}">${fmtSigned(sumAll)}</td>
+    <td colspan="3"></td>
+  </tr>`;
+  body += '</tbody>';
+  tableEl.innerHTML = header + body;
+}
+
+function renderAmountTable(tableEl, rows, period) {
+  const header = `
+    <thead><tr>
+      <th class="stock-col">股票</th>
+      <th>外資(千元)</th>
+      <th>投信(千元)</th>
+      <th>自營商(千元)</th>
+      <th>法人合計(千元)</th>
+      <th>收盤價</th>
+      <th>${period === 1 ? '漲跌%' : period + '日漲跌%'}</th>
+      <th>${period === 1 ? '成交量(張)' : period + '日成交量(張)'}</th>
+    </tr></thead>`;
+  let body = '<tbody>';
+  let sumF=0, sumT=0, sumD=0, sumAll=0;
+  for (const r of rows) {
+    const m = r.metrics;
+    if (!m) {
+      body += `<tr class="skeleton-row"><td class="stock-col"><span class="code-tag">${r.code}</span>${r.name}</td>` +
+              '<td colspan="7">尚無資料</td></tr>';
+      continue;
+    }
+    sumF += m.foreignKTWD; sumT += m.trustKTWD; sumD += m.dealerKTWD; sumAll += m.totalKTWD;
+    body += `<tr>
+      <td class="stock-col"><span class="code-tag">${r.code}</span>${r.name}</td>
+      <td class="num ${classOfChange(m.foreignKTWD)}">${fmtSigned(m.foreignKTWD)}</td>
+      <td class="num ${classOfChange(m.trustKTWD)}">${fmtSigned(m.trustKTWD)}</td>
+      <td class="num ${classOfChange(m.dealerKTWD)}">${fmtSigned(m.dealerKTWD)}</td>
+      <td class="num ${classOfChange(m.totalKTWD)}"><b>${fmtSigned(m.totalKTWD)}</b></td>
+      <td class="num">${fmtPrice(m.close)}</td>
+      <td class="num ${classOfChange(m.pct)}">${fmtPct(m.pct)}</td>
+      <td class="num">${fmtInt(m.volumeLots)}</td>
+    </tr>`;
+  }
+  body += `<tr class="summary-row">
+    <td class="stock-col">13家合計</td>
+    <td class="num ${classOfChange(sumF)}">${fmtSigned(sumF)}</td>
+    <td class="num ${classOfChange(sumT)}">${fmtSigned(sumT)}</td>
+    <td class="num ${classOfChange(sumD)}">${fmtSigned(sumD)}</td>
+    <td class="num ${classOfChange(sumAll)}">${fmtSigned(sumAll)}</td>
+    <td colspan="3"></td>
+  </tr>`;
+  body += '</tbody>';
+  tableEl.innerHTML = header + body;
+}
+
+function renderAll(allResults) {
+  // 顯示最新交易日（取所有股票中最大的日期）
+  let latestInst = '', latestPrice = '';
+  for (const r of allResults) {
+    if (r.metrics) {
+      if (r.metrics.lastDate > latestInst) latestInst = r.metrics.lastDate;
+      if (r.metrics.priceOnlyDate && r.metrics.priceOnlyDate > latestPrice) latestPrice = r.metrics.priceOnlyDate;
+    }
+  }
+  let dateLabel = latestInst || '—';
+  if (latestPrice && latestPrice > latestInst) {
+    dateLabel = `${latestInst}（法人）／${latestPrice}（股價）`;
+  }
+  document.getElementById('latestDate').textContent = dateLabel;
+
+  for (const period of [1, 3, 5]) {
+    const rowsForPeriod = allResults.map(r => ({
+      code: r.code,
+      name: r.name,
+      metrics: r.metrics ? r.metrics[`p${period}`] : null,
+    }));
+    const sharesT = document.querySelector(`.shares-table[data-period="${period}"]`);
+    const amountT = document.querySelector(`.amount-table[data-period="${period}"]`);
+    renderSharesTable(sharesT, rowsForPeriod, period);
+    renderAmountTable(amountT, rowsForPeriod, period);
+  }
+}
+
+// ==== 大盤指數 + 金融指數 ====
+// 從 TWSE MI_INDEX 抓取每日「發行量加權股價指數」與「金融保險類指數」
+// 用 localStorage 快取每個日期的指數值，避免重複抓取
+const IDX_CACHE_KEY = 'fhc_idx_cache_v1';
+
+function loadIdxCache() {
+  try { return JSON.parse(localStorage.getItem(IDX_CACHE_KEY) || '{}'); }
+  catch { return {}; }
+}
+function saveIdxCache(c) {
+  try { localStorage.setItem(IDX_CACHE_KEY, JSON.stringify(c)); } catch {}
+}
+
+function fmtYYYYMMDD(d) {
+  return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+}
+
+async function fetchMiIndex(yyyymmdd) {
+  // 先看快取
+  const cache = loadIdxCache();
+  if (yyyymmdd in cache) return cache[yyyymmdd];
+  try {
+    const url = `https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=${yyyymmdd}&type=IND&response=json`;
+    const data = await fetchJson(url);
+    if (data && data.stat === 'OK' && Array.isArray(data.tables) && data.tables[0] && Array.isArray(data.tables[0].data)) {
+      let taiex = null, fin = null;
+      for (const row of data.tables[0].data) {
+        const name = (row[0] || '').trim();
+        if (name === '發行量加權股價指數') taiex = parseFloat((row[1] || '').replace(/,/g, ''));
+        if (name === '金融保險類指數') fin = parseFloat((row[1] || '').replace(/,/g, ''));
+      }
+      if (!isNaN(taiex) && !isNaN(fin)) {
+        const entry = { d: yyyymmdd, taiex, fin };
+        cache[yyyymmdd] = entry;
+        saveIdxCache(cache);
+        return entry;
+      }
+    }
+    // 非交易日 / 失敗 — 用 null 占位避免重複抓
+    cache[yyyymmdd] = null;
+    saveIdxCache(cache);
+    return null;
+  } catch (e) {
+    console.warn('idx fetch fail', yyyymmdd, e);
+    return null;
+  }
+}
+
+async function fetchIndexHistory() {
+  // 抓近 14 天日歷日，過濾掉非交易日
+  const out = [];
+  const today = new Date();
+  // 由舊到新抓，組成排序好的陣列
+  const dateStrs = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    // 跳過週末
+    const w = d.getDay();
+    if (w === 0 || w === 6) continue;
+    dateStrs.push(fmtYYYYMMDD(d));
+  }
+  for (const ds of dateStrs) {
+    const e = await fetchMiIndex(ds);
+    if (e) out.push(e);
+  }
+  return out; // 已照日期排序
+}
+
+function indexMetrics(history, key, n) {
+  if (!history.length) return null;
+  const last = history[history.length - 1];
+  const prevIdx = history.length - 1 - n;
+  if (prevIdx < 0) return { value: last[key], change: null, pct: null, date: last.d };
+  const prev = history[prevIdx];
+  const change = last[key] - prev[key];
+  const pct = (change / prev[key]) * 100;
+  return { value: last[key], change, pct, date: last.d };
+}
+
+function renderIndexCard(history) {
+  const tb = document.querySelector('#indexTable tbody');
+  if (!history.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="color:#b00020;text-align:center">指數資料載入失敗</td></tr>';
+    return;
+  }
+  function cell(m) {
+    if (!m || m.change === null) return '<td>—</td>';
+    const cls = classOfChange(m.pct);
+    const sign = m.pct > 0 ? '+' : '';
+    return `<td><div class="chg ${cls}">${sign}${m.change.toFixed(2)}　(${sign}${m.pct.toFixed(2)}%)</div></td>`;
+  }
+  const taiex1 = indexMetrics(history, 'taiex', 1);
+  const taiex3 = indexMetrics(history, 'taiex', 3);
+  const taiex5 = indexMetrics(history, 'taiex', 5);
+  const fin1   = indexMetrics(history, 'fin', 1);
+  const fin3   = indexMetrics(history, 'fin', 3);
+  const fin5   = indexMetrics(history, 'fin', 5);
+  tb.innerHTML = `
+    <tr>
+      <td>加權指數</td>
+      <td><span class="val">${taiex1 ? taiex1.value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</span></td>
+      ${cell(taiex1)}${cell(taiex3)}${cell(taiex5)}
+    </tr>
+    <tr>
+      <td>金融保險類指數</td>
+      <td><span class="val">${fin1 ? fin1.value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</span></td>
+      ${cell(fin1)}${cell(fin3)}${cell(fin5)}
+    </tr>`;
+}
+
+// ==== Tab 切換 ====
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const p = btn.dataset.period;
+    document.querySelectorAll('.panel').forEach(panel => {
+      panel.classList.toggle('active', panel.dataset.panel === p);
+    });
+  });
+});
+
+// ==== 主流程 ====
+async function main() {
+  const statusEl = document.getElementById('status');
+  statusEl.className = 'loading';
+  statusEl.textContent = '資料載入中…正在抓取大盤指數';
+
+  // (A) 先抓大盤指數（TWSE MI_INDEX，可快取）
+  let indexHistory = [];
+  try {
+    indexHistory = await fetchIndexHistory();
+    renderIndexCard(indexHistory);
+  } catch (e) {
+    console.error('index fetch failed', e);
+  }
+
+  // (B) 抓 13 檔金控；近 14 天涵蓋週末和假日
+  const endDate = fmtDate(new Date());
+  const startDate = fmtDate(nDaysAgo(14));
+
+  const results = [];
+  let errCount = 0;
+  for (let i = 0; i < FHC_STOCKS.length; i++) {
+    const s = FHC_STOCKS[i];
+    statusEl.textContent = `載入中… (${i + 1}/${FHC_STOCKS.length}) ${s.code} ${s.name}`;
+    try {
+      const stockData = await fetchStock(s.code, startDate, endDate);
+      const metrics = computeMetrics(stockData);
+      results.push({ code: s.code, name: s.name, metrics });
+    } catch (e) {
+      console.error(s.code, e);
+      results.push({ code: s.code, name: s.name, metrics: null, error: String(e) });
+      errCount++;
+    }
+  }
+
+  renderAll(results);
+
+  if (errCount === 0) {
+    statusEl.className = 'ok';
+    statusEl.textContent = `✓ 載入完成 — 共 ${FHC_STOCKS.length} 檔金控，期間 ${startDate} 至 ${endDate}`;
+    setTimeout(() => statusEl.classList.add('hidden'), 4000);
+  } else {
+    statusEl.className = 'error';
+    statusEl.textContent = `⚠ 載入完成，但有 ${errCount} 檔失敗（資料可能尚未公布或暫時 API 異常，請稍後 Reload）`;
+  }
+}
+
+main();
+</script>
+</body>
+</html>
