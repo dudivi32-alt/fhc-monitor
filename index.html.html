@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>13家金控 — 截至 2026-05-22（新介面）</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei","PingFang TC",sans-serif;margin:0;background:#f6f8fa;color:#1a1a1a;font-size:13px;line-height:1.5}
+.wrap{max-width:1200px;margin:0 auto;padding:20px}
+header{background:linear-gradient(135deg,#0a3d62 0%,#1e5f8e 100%);color:#fff;padding:20px 28px;border-radius:8px;margin-bottom:16px}
+header h1{font-size:22px;margin:0 0 4px;font-weight:700}
+header .subtitle{opacity:.85;font-size:13px}
+header .date-pill{display:inline-block;background:rgba(255,255,255,.18);padding:4px 12px;border-radius:20px;font-weight:600;margin-top:8px}
+/* 指數 */
+.index-card{background:linear-gradient(135deg,#f5f9fd 0%,#eef4fa 100%);border:1px solid #d4dde6;border-radius:8px;padding:14px 18px;margin-bottom:14px}
+.index-card h2{margin:0 0 10px;font-size:14px;color:#0a3d62}
+.index-card h2 .unit{font-weight:400;font-size:11px;color:#586069;margin-left:6px}
+.idx-table{width:100%;border-collapse:collapse;font-size:12px}
+.idx-table th{background:transparent;color:#0a3d62;text-align:center;border-bottom:1px solid #c4ccd4;padding:6px}
+.idx-table td{text-align:center;padding:8px 6px;border-bottom:1px dashed #d4dde6;font-variant-numeric:tabular-nums}
+.idx-table td:first-child{text-align:left;font-weight:700;color:#0a3d62}
+.idx-table .val{font-size:17px;font-weight:700;color:#0a3d62}
+/* 觀察 整合 */
+.obs-card{background:#fff;border-left:4px solid #0a3d62;border-radius:8px;padding:16px 20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.obs-card h2{margin:0 0 12px;font-size:14px;color:#0a3d62}
+.obs-card h2 .date-tag{font-weight:400;font-size:11px;color:#586069;background:#f5f7fa;padding:2px 8px;border-radius:10px;margin-left:6px}
+.obs-group{margin-bottom:14px}
+.obs-group:last-child{margin-bottom:0}
+.obs-group-title{font-size:12px;color:#586069;font-weight:600;margin:0 0 6px;padding-left:6px;border-left:3px solid #d4dde6}
+.obs-list{margin:0;padding-left:20px;line-height:1.85;font-size:13px}
+.obs-list li{margin:2px 0}
+.obs-list li.pos::marker{color:#c0392b}
+.obs-list li.neg::marker{color:#27713a}
+.obs-list li.neu::marker{color:#586069}
+.obs-list b.pos{color:#c0392b}.obs-list b.neg{color:#27713a}
+.obs-label{display:inline-block;background:#eef4fa;color:#0a3d62;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;margin-right:6px}
+/* tabs/panels */
+.tabs{display:flex;gap:4px;background:#fff;border-radius:8px 8px 0 0;padding:8px 8px 0;border-bottom:1px solid #e1e4e8}
+.tab-btn{background:transparent;border:none;border-bottom:3px solid transparent;padding:10px 22px;font-size:14px;font-weight:600;color:#586069;cursor:pointer;font-family:inherit;border-radius:4px 4px 0 0;transition:all .15s}
+.tab-btn:hover{color:#0a3d62;background:#f5f7fa}
+.tab-btn.active{color:#0a3d62;border-bottom-color:#0a3d62;background:#f5f7fa}
+.panel{display:none;background:#fff;padding:18px 22px;border-radius:0 0 8px 8px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.panel.active{display:block}
+.section-header{display:flex;align-items:center;margin:14px 0 8px}
+.section-header:first-child{margin-top:0}
+.section-header .section-title{font-size:14px;font-weight:700;color:#0a3d62;margin:0}
+.mode-toggle{display:inline-flex;border:1px solid #d4d9df;border-radius:6px;overflow:hidden;margin-left:8px}
+.mode-btn{background:#fff;border:none;padding:4px 12px;font-size:12px;color:#586069;cursor:pointer;font-family:inherit}
+.mode-btn:hover{background:#f5f7fa}
+.mode-btn.active{background:#0a3d62;color:#fff}
+/* data tables */
+table.data{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px}
+table.data th,table.data td{padding:7px 10px;text-align:right;border-bottom:1px solid #eef0f2;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.data th{background:#f5f7fa;color:#0a3d62;font-weight:600;border-bottom:2px solid #d4d9df;cursor:pointer;user-select:none;position:relative}
+table.data th:first-child,table.data td:first-child{text-align:left}
+table.data th:hover{background:#e8edf3}
+table.data tr:hover td{background:#fafbfc}
+.pos{color:#c0392b;font-weight:500}.neg{color:#27713a;font-weight:500}.neu{color:#586069}
+.code{display:inline-block;background:#eef0f2;color:#586069;padding:2px 7px;border-radius:3px;font-size:11px;margin-right:8px}
+.sum td{background:#eef4fa;font-weight:700;border-top:2px solid #0a3d62;color:#0a3d62}
+.sort-ind{display:inline-block;width:10px;opacity:.35;margin-left:3px;font-size:9px}
+th.sort-asc .sort-ind,th.sort-desc .sort-ind{opacity:1;color:#0a3d62}
+th.sort-asc .sort-ind::before{content:'▲'}
+th.sort-desc .sort-ind::before{content:'▼'}
+.sort-ind::before{content:'▾'}
+.chg{display:inline-block}
+.foot{margin-top:16px;padding:14px 18px;background:#fff;border-radius:8px;color:#6a737d;font-size:11px;line-height:1.7;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.foot b{color:#0a3d62}
+@media (max-width:700px){.wrap{padding:12px}header{padding:16px}header h1{font-size:18px}.panel{padding:12px}table.data th,table.data td{padding:5px 6px;font-size:11px}.code{font-size:10px;padding:1px 4px;margin-right:4px}}
+</style></head><body><div class="wrap">
+
+<header><h1>13家金控　收盤價及法人買賣超</h1>
+<div class="subtitle">含大盤指數＋金融指數、外資/投信/自營商買賣超、持股增減、持股比例</div>
+<div class="date-pill">📅 最新交易日 2026-05-22</div></header>
+
+<div class="index-card"><h2>📈 大盤指數<span class="unit">收盤｜當日 / 3 日 / 5 日漲跌</span></h2>
+<table class="idx-table"><thead><tr><th style="text-align:left">指數</th><th>最新收盤</th><th>當日</th><th>3日</th><th>5日</th></tr></thead><tbody id="idxBody"></tbody></table></div>
+
+<div class="obs-card"><h2>📌 每日觀察<span class="date-tag">2026-05-22</span></h2>
+<div class="obs-group"><div class="obs-group-title">🔍 當日重點事件</div><ul class="obs-list">
+<li class="pos"><b class="pos">凱基金 +1.40%</b> 領漲，外資 <span class="neg">-11,435</span> 張</li>
+<li class="neg"><b class="neg">永豐金 -2.02%</b> 領跌，外資 <span class="neg">-21,853</span> 張</li>
+<li class="pos">外資最多買超：<b>國泰金</b> <span class="pos">+27,782</span> 張</li>
+<li class="neg">外資最多賣超：<b>第一金</b> <span class="neg">-69,439</span> 張</li>
+<li class="neg">13家金控當日法人合計 <b><span class="neg">-124,552</span> 張</b>（外資 <span class="neg">-113,742</span> 張、投信 <span class="neg">-4,633</span> 張）</li>
+<li class="neu">當日加權指數 <b class="pos">+2.18%</b>、金融指數 <b class="neg">-0.11%</b> — 金融族群<b class="neg">相對弱勢</b></li></ul></div><div class="obs-group"><div class="obs-group-title">💡 綜合判斷</div><ul class="obs-list"><li class="neu"><span class="obs-label">法人態度</span>13 家金控中 <b>5 檔</b>法人合計買超、<b>8 檔</b>賣超，整體 <b class="neg">偏空</b>（外資 <span class="neg">-113,742</span> 張、投信 <span class="neg">-4,633</span> 張、法人合計 <b class="neg">-124,552 張</b>）</li>
+<li class="neu"><span class="obs-label">資金流入</span>法人買超前 3 名：<b class="pos">中信金(+6,581)</b>、<b class="pos">國泰金(+5,782)</b>、<b class="pos">兆豐金(+2,311)</b>，合計 +14,673 張</li>
+<li class="neu"><span class="obs-label">資金流出</span>法人賣超前 3 名：<b class="neg">第一金(-66,862)</b>、<b class="neg">永豐金(-22,920)</b>、<b class="neg">玉山金(-20,325)</b>，合計 -110,108 張</li>
+<li class="neu"><span class="obs-label">外資 vs 投信</span>外資 <span class="neg">-113,742</span> 張、投信 <span class="neg">-4,633</span> 張 — <b>方向一致（齊力賣超）</b></li>
+<li class="neu"><span class="obs-label">族群表現</span>金融指數 <b class="neg">-0.11%</b> vs 大盤 +2.18% — 金融族群<b class="neg">相對弱勢</b>；13 家中 <b class="pos">4 檔上漲</b>、<b class="neg">8 檔下跌</b></li>
+<li class="neu"><span class="obs-label">高持股族</span>外資持股 ≥ 25% 的 <b>6 檔</b>（凱基金、玉山金、元大金、永豐金、中信金、第一金）中，今日 2 檔被加碼、<b class="neg">4 檔被減碼</b></li></ul></div></div>
+<nav class="tabs">
+  <button class="tab-btn active" onclick="switchTab(1)" id="t1">當日</button>
+  <button class="tab-btn" onclick="switchTab(3)" id="t3">三日累計</button>
+  <button class="tab-btn" onclick="switchTab(5)" id="t5">五日累計</button>
+</nav>
+<section class="panel active" id="p1">
+  <div class="section-header"><h3 class="section-title">📊 法人買賣超（當日）</h3>
+    <div class="mode-toggle"><button class="mode-btn active" onclick="setMode(1,'lots')" id="m1l">張數</button><button class="mode-btn" onclick="setMode(1,'amount')" id="m1a">金額</button></div>
+  </div>
+  <table class="data" id="inst1"></table>
+</section>
+<section class="panel" id="p3">
+  <div class="section-header"><h3 class="section-title">📊 法人買賣超（三日累計）</h3>
+    <div class="mode-toggle"><button class="mode-btn active" onclick="setMode(3,'lots')" id="m3l">張數</button><button class="mode-btn" onclick="setMode(3,'amount')" id="m3a">金額</button></div>
+  </div>
+  <table class="data" id="inst3"></table>
+</section>
+<section class="panel" id="p5">
+  <div class="section-header"><h3 class="section-title">📊 法人買賣超（五日累計）</h3>
+    <div class="mode-toggle"><button class="mode-btn active" onclick="setMode(5,'lots')" id="m5l">張數</button><button class="mode-btn" onclick="setMode(5,'amount')" id="m5a">金額</button></div>
+  </div>
+  <table class="data" id="inst5"></table>
+</section>
+
+<div class="foot"><b>資料來源</b>：FinMind（個股股價、法人買賣超、外資持股）、TWSE MI_INDEX（指數）<br>
+<b>欄位定義</b>：外資 含外資自營商；自營商＝自行買賣＋避險｜<b>增減</b>＝持股比例變化（百分點）｜<b>持股</b>＝最新公布持股比率｜投信、自營商「持股」欄為近 90 日累計試算（非真實持股）<br>
+<b>顏色</b>：<span class="pos">紅＝買超／上漲</span>　<span class="neg">綠＝賣超／下跌</span></div>
+
+<script>
+const DATA = {"all_results": [{"code":"2880","name":"華南金","p1":{"close": 31.95, "pct": -0.3120124804992133, "vol": 32193.459, "fL": -12352.783, "tL": 8433.0, "dL": -849.062, "totL": -4768.845, "fK": -394.67141684999996, "tK": 269.43435, "dK": -27.1275309, "totK": -152.36459775, "fChange": -0.0799999999999983, "tChange": 0.06059510781316439, "dChange": -0.006100913486311039, "fHold": 17.42, "tHold": -0.36172891631229415, "dHold": -0.036128063610464084},"p3":{"close": 31.95, "pct": -0.7763975155279613, "vol": 94695.3, "fL": -20754.916, "tL": 13958.821, "dL": -1959.946, "totL": -8756.041, "fK": -663.9597795, "tK": 446.53691304999995, "dK": -62.731363099999996, "totK": -280.15422954999997, "fChange": -0.10999999999999943, "tChange": 0.10030075458788844, "dChange": -0.014083142319219769, "fHold": 17.42, "tHold": -0.36172891631229415, "dHold": -0.036128063610464084},"p5":{"close": 31.95, "pct": -1.3888888888888866, "vol": 143149.07, "fL": -5436.638, "tL": -4578.179, "dL": -1626.159, "totL": -11640.976, "fK": -171.32454444999988, "tK": -148.25063695000006, "dK": -52.03176089999999, "totK": -371.60694229999996, "fChange": 0.0, "tChange": -0.03289638919636727, "dChange": -0.011684724288669228, "fHold": 17.42, "tHold": -0.36172891631229415, "dHold": -0.036128063610464084}},{"code":"2881","name":"富邦金","p1":{"close": 95.1, "pct": -1.040582726326743, "vol": 41801.468, "fL": 3731.229, "tL": -16212.551, "dL": -207.49, "totL": -12688.812, "fK": 354.8398779, "tK": -1541.8136000999998, "dK": -19.732299, "totK": -1206.7060212, "fChange": 0.030000000000001137, "tChange": -0.11574304700103596, "dChange": -0.0014812921681631073, "fHold": 16.94, "tHold": -1.415270435798095, "dHold": 0.06719293765995682},"p3":{"close": 95.1, "pct": -2.1604938271605025, "vol": 103526.66, "fL": 3384.494, "tL": -29998.345, "dL": -1048.07, "totL": -27661.921, "fK": 324.01997479999994, "tK": -2866.6953653, "dK": -100.2515752, "totK": -2642.9269657, "fChange": 0.010000000000001563, "tChange": -0.21416122948746882, "dChange": -0.007482278098639491, "fHold": 16.94, "tHold": -1.415270435798095, "dHold": 0.06719293765995682},"p5":{"close": 95.1, "pct": -1.040582726326743, "vol": 165601.862, "fL": 17177.814, "tL": -37847.941, "dL": -369.436, "totL": -21039.563, "fK": 1666.0032148000003, "tK": -3619.6607105, "dK": -34.9535824, "totK": -1988.6110780999998, "fChange": 0.0400000000000027, "tChange": -0.2702002919870806, "dChange": -0.0026374410980649944, "fHold": 16.94, "tHold": -1.415270435798095, "dHold": 0.06719293765995682}},{"code":"2882","name":"國泰金","p1":{"close": 79.7, "pct": 1.2706480304955527, "vol": 40807.865, "fL": 27782.473, "tL": -22136.936, "dL": 136.237, "totL": 5781.774, "fK": 2214.2630980999998, "tK": -1764.3137992, "dK": 10.8580889, "totK": 460.8073878, "fChange": 0.19000000000000128, "tChange": -0.15090748449874547, "dChange": 0.0009287275784532957, "fHold": 20.85, "tHold": -1.1208337706347702, "dHold": 0.08864175294060524},"p3":{"close": 79.7, "pct": 2.4421593830334265, "vol": 110434.409, "fL": 53619.554, "tL": -45038.373, "dL": -782.581, "totL": 7798.6, "fK": 4247.5825696, "tK": -3565.8936295, "dK": -60.66914930000001, "totK": 621.0197908000001, "fChange": 0.33999999999999986, "tChange": -0.3070265720308455, "dChange": -0.005334854386646496, "fHold": 20.85, "tHold": -1.1208337706347702, "dHold": 0.08864175294060524},"p5":{"close": 79.7, "pct": 2.3106546854942196, "vol": 182591.709, "fL": 81837.944, "tL": -72575.84, "dL": 48.767, "totL": 9310.871, "fK": 6440.1590916000005, "tK": -5698.7372531, "dK": 3.583765099999996, "totK": 745.0056036000002, "fChange": 0.5300000000000011, "tChange": -0.49474947435288386, "dChange": 0.00033244462090644886, "fHold": 20.85, "tHold": -1.1208337706347702, "dHold": 0.08864175294060524}},{"code":"2883","name":"凱基金","p1":{"close": 21.7, "pct": 1.4018691588785082, "vol": 43900.065, "fL": -11435.289, "tL": 4835.806, "dL": -598.321, "totL": -7197.804, "fK": -248.14577129999998, "tK": 104.9369902, "dK": -12.9835657, "totK": -156.1923468, "fChange": -0.10999999999999943, "tChange": 0.028488068190569097, "dChange": -0.0035247504651446924, "fHold": 30.54, "tHold": -0.35371476902568894, "dHold": 0.02946408876742373},"p3":{"close": 21.7, "pct": 0.23094688221709336, "vol": 158537.422, "fL": -25656.586, "tL": 15597.806, "dL": -1866.257, "totL": -11925.037, "fK": -550.3892994999999, "tK": 336.4353902, "dK": -40.2490105, "totK": -254.20291979999993, "fChange": -0.16000000000000014, "tChange": 0.09188775582628167, "dChange": -0.010994249288976214, "fHold": 30.54, "tHold": -0.35371476902568894, "dHold": 0.02946408876742373},"p5":{"close": 21.7, "pct": -0.6864988558352499, "vol": 300310.17, "fL": -40720.806, "tL": -3136.194, "dL": -1272.956, "totL": -45129.956, "fK": -868.1718734, "tK": -67.5090098, "dK": -27.44682835, "totK": -963.12771155, "fChange": -0.26000000000000156, "tChange": -0.018475536142445265, "dChange": -0.007499071991637811, "fHold": 30.54, "tHold": -0.35371476902568894, "dHold": 0.02946408876742373}},{"code":"2884","name":"玉山金","p1":{"close": 31.3, "pct": -0.7923930269413629, "vol": 40828.522, "fL": -11826.161, "tL": -7757.448, "dL": -741.581, "totL": -20325.19, "fK": -370.1588393, "tK": -242.8081224, "dK": -23.2114853, "totK": -636.178447, "fChange": -0.05000000000000071, "tChange": -0.047962458266353404, "dChange": -0.004585019166563621, "fHold": 30.39, "tHold": -0.8592159329788549, "dHold": 0.03263895758624953},"p3":{"close": 31.3, "pct": -2.187499999999998, "vol": 101956.378, "fL": -37729.043, "tL": -5618.448, "dL": -1550.44, "totL": -44897.931, "fK": -1189.5297494000001, "tK": -174.88257240000002, "dK": -48.7577445, "totK": -1413.1700663, "fChange": -0.21000000000000085, "tChange": -0.034737529368121675, "dChange": -0.009586002225794484, "fHold": 30.39, "tHold": -0.8592159329788549, "dHold": 0.03263895758624953},"p5":{"close": 31.3, "pct": -2.034428794992171, "vol": 169232.564, "fL": -34185.155, "tL": -7019.448, "dL": -1150.797, "totL": -42355.4, "fK": -1074.3380165, "tK": -219.50847240000002, "dK": -35.9726605, "totK": -1329.8191494, "fChange": -0.21000000000000085, "tChange": -0.04339957957215284, "dChange": -0.007115104488685545, "fHold": 30.39, "tHold": -0.8592159329788549, "dHold": 0.03263895758624953}},{"code":"2885","name":"元大金","p1":{"close": 55.1, "pct": 0.731261425959778, "vol": 25396.6, "fL": 10559.173, "tL": -9862.89, "dL": -913.841, "totL": -217.558, "fK": 581.8104323000001, "tK": -543.445239, "dK": -50.352639100000005, "totK": -11.987445800000001, "fChange": 0.08999999999999986, "tChange": -0.07398379014527064, "dChange": -0.006854930022553659, "fHold": 26.12, "tHold": -0.9489652844086313, "dHold": 0.08427602304009071},"p3":{"close": 55.1, "pct": 0.731261425959778, "vol": 72304.117, "fL": 11767.179, "tL": -20568.89, "dL": -2069.643, "totL": -10871.354, "fK": 648.0609613, "tK": -1129.734639, "dK": -113.6604173, "totK": -595.334095, "fChange": 0.10000000000000142, "tChange": -0.15429194093020968, "dChange": -0.015524864759480068, "fHold": 26.12, "tHold": -0.9489652844086313, "dHold": 0.08427602304009071},"p5":{"close": 55.1, "pct": 0.5474452554744604, "vol": 129348.393, "fL": 24854.382, "tL": -35439.89, "dL": -960.755, "totL": -11546.263, "fK": 1363.5874242, "tK": -1941.309539, "dK": -53.1119365, "totK": -630.8340512999999, "fChange": 0.19000000000000128, "tChange": -0.2658427078200685, "dChange": -0.007206842649671597, "fHold": 26.12, "tHold": -0.9489652844086313, "dHold": 0.08427602304009071}},{"code":"2886","name":"兆豐金","p1":{"close": 39.9, "pct": -0.7462686567164285, "vol": 28876.62, "fL": -5398.778, "tL": 8224.453, "dL": -514.874, "totL": 2310.801, "fK": -215.41124219999998, "tK": 328.15567469999996, "dK": -20.543472599999998, "totK": 92.20095989999999, "fChange": -0.03999999999999915, "tChange": 0.05544558254797698, "dChange": -0.003471050156017318, "fHold": 21.8, "tHold": -0.3224994137582933, "dHold": 0.02296506524163623},"p3":{"close": 39.9, "pct": -1.8450184501845017, "vol": 92333.53, "fL": -17902.091, "tL": 16174.453, "dL": -1497.831, "totL": -3225.469, "fK": -718.5658710999999, "tK": 647.7449747000001, "dK": -60.094841, "totK": -130.91573739999998, "fChange": -0.10999999999999943, "tChange": 0.10904092575881628, "dChange": -0.010097706480104988, "fHold": 21.8, "tHold": -0.3224994137582933, "dHold": 0.02296506524163623},"p5":{"close": 39.9, "pct": 1.2690355329949239, "vol": 179528.671, "fL": 5943.622, "tL": 16402.453, "dL": -1258.074, "totL": 21088.001, "fK": 248.70762174999993, "tK": 657.0263747, "dK": -50.35638595, "totK": 855.3776105, "fChange": 0.07000000000000028, "tChange": 0.11057799975278752, "dChange": -0.008481372052155153, "fHold": 21.8, "tHold": -0.3224994137582933, "dHold": 0.02296506524163623}},{"code":"2887","name":"台新新光金","p1":{"close": 23.8, "pct": -0.20964360587002392, "vol": 105580.11, "fL": -28739.056, "tL": 29605.593, "dL": -316.221, "totL": 550.316, "fK": -683.9895328000001, "tK": 704.6131134, "dK": -7.5260598, "totK": 13.097520800000002, "fChange": -0.10000000000000142, "tChange": 0.1190586249587854, "dChange": -0.001271679896534823, "fHold": 23.58, "tHold": -0.7985783070691896, "dHold": 0.1173171263365098},"p3":{"close": 23.8, "pct": 0.8474576271186409, "vol": 300713.574, "fL": -27253.052, "tL": 56948.593, "dL": -3171.965, "totL": 26523.576, "fK": -646.7329723000001, "tK": 1356.5854134, "dK": -75.729009, "totK": 634.1234321, "fChange": -0.120000000000001, "tChange": 0.22901825259563324, "dChange": -0.012756028609776328, "fHold": 23.58, "tHold": -0.7985783070691896, "dHold": 0.1173171263365098},"p5":{"close": 23.8, "pct": 0.0, "vol": 469244.54, "fL": -7739.69, "tL": 24407.593, "dL": -1959.169, "totL": 14708.734, "fK": -184.28316445000004, "tK": 589.7249634, "dK": -47.267824, "totK": 358.17397495, "fChange": -0.08000000000000185, "tChange": 0.09815491488833464, "dChange": -0.007878780445366476, "fHold": 23.58, "tHold": -0.7985783070691896, "dHold": 0.1173171263365098}},{"code":"2889","name":"國票金","p1":{"close": 14.65, "pct": -0.6779661016949128, "vol": 1892.071, "fL": 24.281, "tL": -5.0, "dL": 53.982, "totL": 73.263, "fK": 0.35571665, "tK": -0.07325, "dK": 0.7908363, "totK": 1.07330295, "fChange": 0.009999999999999787, "tChange": -0.0001376059628490249, "dChange": 0.0014856490173032126, "fHold": 8.48, "tHold": -0.07098747608474072, "dHold": -0.05511358246478805},"p3":{"close": 14.65, "pct": 0.0, "vol": 6112.701, "fL": -62.519, "tL": -5.0, "dL": -73.811, "totL": -141.33, "fK": -0.90363335, "tK": -0.07325, "dK": -1.09113455, "totK": -2.0680178999999996, "fChange": 0.009999999999999787, "tChange": -0.0001376059628490249, "dChange": -0.0020313667447698753, "fHold": 8.48, "tHold": -0.07098747608474072, "dHold": -0.05511358246478805},"p5":{"close": 14.65, "pct": 0.6872852233676952, "vol": 10377.763, "fL": 1268.619, "tL": -5.0, "dL": -42.279, "totL": 1221.34, "fK": 18.57922375, "tK": -0.07325, "dK": -0.6265862499999998, "totK": 17.879387500000004, "fChange": 0.030000000000001137, "tChange": -0.0001376059628490249, "dChange": -0.0011635685006587849, "fHold": 8.48, "tHold": -0.07098747608474072, "dHold": -0.05511358246478805}},{"code":"2890","name":"永豐金","p1":{"close": 29.1, "pct": -2.0202020202020132, "vol": 48666.211, "fL": -21852.748, "tL": -75.584, "dL": -992.131, "totL": -22920.463, "fK": -635.9149668000001, "tK": -2.1994944, "dK": -28.8710121, "totK": -666.9854733000001, "fChange": -0.16000000000000014, "tChange": -0.000521185494065984, "dChange": -0.006841187095326773, "fHold": 28.04, "tHold": -0.4752928647767207, "dHold": -0.0969952241666068},"p3":{"close": 29.1, "pct": -3.322259136212624, "vol": 107128.943, "fL": -37549.518, "tL": 1825.416, "dL": -2240.417, "totL": -37964.519, "fK": -1103.0978749, "tK": 54.426905600000005, "dK": -65.9734585, "totK": -1114.6444278000001, "fChange": -0.26000000000000156, "tChange": 0.012587059957609444, "dChange": -0.015448677511891799, "fHold": 28.04, "tHold": -0.4752928647767207, "dHold": -0.0969952241666068},"p5":{"close": 29.1, "pct": -3.6423841059602577, "vol": 195783.496, "fL": -4207.206, "tL": -16227.584, "dL": -2626.793, "totL": -23061.583, "fK": -99.74235030000007, "tK": -488.4716944, "dK": -77.5720514, "totK": -665.7860961, "fChange": -0.030000000000001137, "tChange": -0.11189645142539767, "dChange": -0.018112912885188247, "fHold": 28.04, "tHold": -0.4752928647767207, "dHold": -0.0969952241666068}},{"code":"2891","name":"中信金","p1":{"close": 57.6, "pct": 0.17391304347826333, "vol": 37279.59, "fL": 10103.855, "tL": -2088.926, "dL": -1434.058, "totL": 6580.871, "fK": 581.982048, "tK": -120.3221376, "dK": -82.6017408, "totK": 379.05816960000004, "fChange": 0.060000000000002274, "tChange": -0.010615638972032162, "dChange": -0.007287688502586734, "fHold": 34.61, "tHold": -1.1657260311484463, "dHold": 0.05364996560360566},"p3":{"close": 57.6, "pct": 3.971119133574012, "vol": 224075.955, "fL": 88710.92, "tL": -28459.193, "dL": -2401.361, "totL": 57850.366, "fK": 5117.0633628, "tK": -1637.7789701999998, "dK": -138.1584197, "totK": 3341.1259728999994, "fChange": 0.46000000000000085, "tChange": -0.14462576382475248, "dChange": -0.012203391320476705, "fHold": 34.61, "tHold": -1.1657260311484463, "dHold": 0.05364996560360566},"p5":{"close": 57.6, "pct": 5.109489051094899, "vol": 315166.015, "fL": 125531.792, "tL": -47669.054, "dL": -1065.807, "totL": 76796.931, "fK": 7153.257631799999, "tK": -2699.8685274, "dK": -64.5642157, "totK": 4388.8248887, "fChange": 0.6400000000000006, "tChange": -0.24224767531368063, "dChange": -0.0054162868028186165, "fHold": 34.61, "tHold": -1.1657260311484463, "dHold": 0.05364996560360566}},{"code":"2892","name":"第一金","p1":{"close": 27.55, "pct": -0.5415162454873594, "vol": 84956.255, "fL": -69439.278, "tL": 2461.676, "dL": 115.285, "totL": -66862.317, "fK": -1913.0521089000001, "tK": 67.8191738, "dK": 3.17610175, "totK": -1842.05683335, "fChange": -0.4800000000000004, "tChange": 0.017119380833310553, "dChange": 0.0008017333797657398, "fHold": 25.53, "tHold": -0.060106699422443545, "dHold": 0.07884625138773817},"p3":{"close": 27.55, "pct": -4.999999999999997, "vol": 346233.005, "fL": -278207.193, "tL": 8937.676, "dL": -297.053, "totL": -269566.57, "fK": -7702.77204175, "tK": 247.3858738, "dK": -8.26970825, "totK": -7463.6558762, "fChange": -1.9199999999999982, "tChange": 0.062155815472361, "dChange": -0.002065813468010169, "fHold": 25.53, "tHold": -0.060106699422443545, "dHold": 0.07884625138773817},"p5":{"close": 27.55, "pct": -5.972696245733788, "vol": 403633.984, "fL": -285713.438, "tL": 13701.676, "dL": 52.602, "totL": -271959.16, "fK": -7917.68252125, "tK": 385.5423738, "dK": 1.8428515, "totK": -7530.297295950001, "fChange": -1.9699999999999989, "tChange": 0.09528638598200219, "dChange": 0.00036581323886401043, "fHold": 25.53, "tHold": -0.060106699422443545, "dHold": 0.07884625138773817}},{"code":"5880","name":"合庫金","p1":{"close": 22.7, "pct": 0.0, "vol": 15434.059, "fL": -4898.568, "tL": -54.244, "dL": 85.0, "totL": -4867.812, "fK": -111.19749359999999, "tK": -1.2313388, "dK": 1.9295, "totK": -110.49933239999999, "fChange": -0.019999999999999574, "tChange": -0.00034592320788926043, "dChange": 0.0005420594475073214, "fHold": 15.25, "tHold": 0.03744685685685936, "dHold": 0.06747585337553001},"p3":{"close": 22.7, "pct": -0.4385964912280764, "vol": 44106.828, "fL": -20360.717, "tL": -253.244, "dL": -315.998, "totL": -20929.959, "fK": -462.18827589999995, "tK": -5.7486388, "dK": -7.173154599999999, "totK": -475.11006929999996, "fChange": -0.14000000000000057, "tChange": -0.0016149800320534597, "dChange": -0.002015172956393159, "fHold": 15.25, "tHold": 0.03744685685685936, "dHold": 0.06747585337553001},"p5":{"close": 22.7, "pct": -0.6564551422319568, "vol": 78974.338, "fL": -25866.619, "tL": 323.756, "dL": 122.296, "totL": -25420.567, "fK": -586.9842286, "tK": 7.4071612, "dK": 2.8178661000000016, "totK": -576.7592013, "fChange": -0.16999999999999993, "tChange": 0.002064647041025651, "dChange": 0.0007799023787335926, "fHold": 15.25, "tHold": 0.03744685685685936, "dHold": 0.06747585337553001}}], "indexHistory": [{"d": "20260514", "taiex": 41751.75, "fin": 2521.32}, {"d": "20260515", "taiex": 41172.36, "fin": 2529.76}, {"d": "20260518", "taiex": 40891.82, "fin": 2508.68}, {"d": "20260519", "taiex": 40175.56, "fin": 2539.81}, {"d": "20260520", "taiex": 40020.82, "fin": 2539.21}, {"d": "20260521", "taiex": 41368.21, "fin": 2539.22}, {"d": "20260522", "taiex": 42267.97, "fin": 2536.33}]};
+const state = {};
+
+function fmtSigned(n){ if(n==null||isNaN(n))return'—';const r=Math.round(n);if(r===0)return'0';return(r>0?'+':'')+r.toLocaleString('en-US'); }
+function fmtSignedDec(n){ if(n==null||isNaN(n))return'—';if(Math.abs(n)<0.05)return'0';return(n>0?'+':'')+n.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1}); }
+function fmtPrice(n){return n==null?'—':n.toFixed(2);}
+function fmtPct(n){if(n==null||isNaN(n))return'—';return(n>0?'+':'')+n.toFixed(2)+'%';}
+function fmtInt(n){return n==null?'—':Math.round(n).toLocaleString('en-US');}
+function clsOf(n){if(n==null||isNaN(n)||n===0)return'neu';return n>0?'pos':'neg';}
+
+function sortRows(rows,key,dir){
+  const mul=dir==='asc'?1:-1;
+  return [...rows].sort((a,b)=>{
+    if(key==='code')return a.code.localeCompare(b.code)*mul;
+    if(key==='name')return a.name.localeCompare(b.name)*mul;
+    const va=a.m?a.m[key]:null, vb=b.m?b.m[key]:null;
+    const ea=va==null||isNaN(va), eb=vb==null||isNaN(vb);
+    if(ea&&eb)return 0; if(ea)return 1; if(eb)return -1;
+    return (va-vb)*mul;
+  });
+}
+function thHtml(label,key,st){
+  const cls=st.sortKey===key?('sort-'+st.sortDir):'';
+  return `<th class="${cls}" data-key="${key}">${label}<span class="sort-ind"></span></th>`;
+}
+
+function renderInst(period){
+  const k=`inst_${period}`;
+  if(!state[k])state[k]={mode:'lots',sortKey:'code',sortDir:'asc'};
+  const st=state[k]; const isLots=st.mode==='lots';
+  const cols=isLots?[
+    ['股票','code'],['外資(張)','fL'],['投信(張)','tL'],['自營商(張)','dL'],['法人合計(張)','totL'],
+    ['收盤價','close'],[period===1?'漲跌':period+'日漲跌','pct'],[period===1?'成交量(張)':period+'日成交量(張)','vol'],
+  ]:[
+    ['股票','code'],['外資(百萬)','fK'],['投信(百萬)','tK'],['自營商(百萬)','dK'],['法人合計(百萬)','totK'],
+    ['收盤價','close'],[period===1?'漲跌':period+'日漲跌','pct'],[period===1?'成交量(張)':period+'日成交量(張)','vol'],
+  ];
+  const rows=DATA.all_results.map(r=>({code:r.code,name:r.name,m:r['p'+period]}));
+  const sorted=sortRows(rows,st.sortKey,st.sortDir);
+  const head='<thead><tr>'+cols.map(c=>thHtml(c[0],c[1],st)).join('')+'</tr></thead>';
+  let body='<tbody>'; let sumF=0,sumT=0,sumD=0,sumAll=0;
+  for(const r of sorted){
+    const m=r.m;
+    if(isLots){
+      sumF+=m.fL;sumT+=m.tL;sumD+=m.dL;sumAll+=m.totL;
+      body+=`<tr><td><span class="code">${r.code}</span>${r.name}</td>
+        <td class="${clsOf(m.fL)}">${fmtSigned(m.fL)}</td><td class="${clsOf(m.tL)}">${fmtSigned(m.tL)}</td>
+        <td class="${clsOf(m.dL)}">${fmtSigned(m.dL)}</td><td class="${clsOf(m.totL)}"><b>${fmtSigned(m.totL)}</b></td>
+        <td>${fmtPrice(m.close)}</td><td class="${clsOf(m.pct)}">${fmtPct(m.pct)}</td><td>${fmtInt(m.vol)}</td></tr>`;
+    } else {
+      sumF+=m.fK;sumT+=m.tK;sumD+=m.dK;sumAll+=m.totK;
+      body+=`<tr><td><span class="code">${r.code}</span>${r.name}</td>
+        <td class="${clsOf(m.fK)}">${fmtSignedDec(m.fK)}</td><td class="${clsOf(m.tK)}">${fmtSignedDec(m.tK)}</td>
+        <td class="${clsOf(m.dK)}">${fmtSignedDec(m.dK)}</td><td class="${clsOf(m.totK)}"><b>${fmtSignedDec(m.totK)}</b></td>
+        <td>${fmtPrice(m.close)}</td><td class="${clsOf(m.pct)}">${fmtPct(m.pct)}</td><td>${fmtInt(m.vol)}</td></tr>`;
+    }
+  }
+  const sf=isLots?fmtSigned:fmtSignedDec;
+  body+=`<tr class="sum"><td>13家合計</td><td class="${clsOf(sumF)}">${sf(sumF)}</td><td class="${clsOf(sumT)}">${sf(sumT)}</td><td class="${clsOf(sumD)}">${sf(sumD)}</td><td class="${clsOf(sumAll)}">${sf(sumAll)}</td><td colspan="3"></td></tr></tbody>`;
+  document.getElementById('inst'+period).innerHTML=head+body;
+  document.querySelectorAll('#inst'+period+' th').forEach(th=>{
+    th.onclick=()=>{const kk=th.dataset.key;if(st.sortKey===kk)st.sortDir=st.sortDir==='asc'?'desc':'asc';else{st.sortKey=kk;st.sortDir='asc';}renderInst(period);};
+  });
+}
+
+
+function renderIdx(){
+  function idxM(key,n){const last=DATA.indexHistory[DATA.indexHistory.length-1];if(DATA.indexHistory.length<=n)return null;const prev=DATA.indexHistory[DATA.indexHistory.length-1-n];return{val:last[key],chg:last[key]-prev[key],pct:(last[key]-prev[key])/prev[key]*100};}
+  function cell(m){if(!m)return'<td>—</td>';const c=clsOf(m.pct),s=m.pct>0?'+':'';return`<td><div class="chg ${c}">${s}${m.chg.toFixed(2)}　(${s}${m.pct.toFixed(2)}%)</div></td>`;}
+  const t1=idxM('taiex',1),t3=idxM('taiex',3),t5=idxM('taiex',5);
+  const f1=idxM('fin',1),f3=idxM('fin',3),f5=idxM('fin',5);
+  document.getElementById('idxBody').innerHTML=`
+    <tr><td>加權指數</td><td><span class="val">${t1.val.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></td>${cell(t1)}${cell(t3)}${cell(t5)}</tr>
+    <tr><td>金融保險類指數</td><td><span class="val">${f1.val.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></td>${cell(f1)}${cell(f3)}${cell(f5)}</tr>`;
+}
+
+function switchTab(n){['1','3','5'].forEach(x=>{document.getElementById('p'+x).classList.toggle('active',x==n);document.getElementById('t'+x).classList.toggle('active',x==n);});}
+function setMode(n,m){state['inst_'+n].mode=m;document.getElementById('m'+n+'l').classList.toggle('active',m==='lots');document.getElementById('m'+n+'a').classList.toggle('active',m==='amount');renderInst(n);}
+
+renderIdx();
+[1,3,5].forEach(n=>{renderInst(n);});
+</script>
+</div></body></html>
