@@ -65,15 +65,74 @@ th.sort-desc .sort-ind::before{content:'▼'}
 .chg{display:inline-block}
 .foot{margin-top:16px;padding:14px 18px;background:#fff;border-radius:8px;color:#6a737d;font-size:11px;line-height:1.7;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .foot b{color:#0a3d62}
-@media (max-width:700px){.wrap{padding:12px}header{padding:16px}header h1{font-size:18px}.panel{padding:12px}table.data th,table.data td{padding:5px 6px;font-size:11px}.code{font-size:10px;padding:1px 4px;margin-right:4px}}
+/* ── 桌機優化 ── */
+@media (min-width:701px){
+  .wrap{padding:24px 28px}
+  header{padding:22px 32px;border-radius:10px;margin-bottom:18px}
+  header h1{font-size:24px}
+  .index-card{border-radius:10px;padding:16px 22px;margin-bottom:16px}
+  .idx-table{font-size:13px}
+  .idx-table th,.idx-table td{padding:9px 10px}
+  .idx-table .val{font-size:19px}
+  .obs-card{padding:18px 24px;border-radius:10px;margin-bottom:18px}
+  .obs-list{font-size:13.5px;line-height:1.9}
+  .tabs{padding:10px 10px 0;gap:6px;border-radius:10px 10px 0 0}
+  .tab-btn{padding:11px 28px;font-size:14px}
+  .panel{padding:20px 26px;border-radius:0 0 10px 10px}
+  table.data th,table.data td{padding:9px 13px;font-size:13px}
+  .table-scroll{overflow-x:auto}
+  .foot{padding:16px 22px;font-size:12px;border-radius:10px;margin-top:18px}
+}
+/* ── 手機優化 ── */
+@media (max-width:700px){
+  .wrap{padding:8px 8px 20px}
+  header{padding:13px 14px 12px;border-radius:8px;margin-bottom:12px}
+  header h1{font-size:15px;margin-bottom:3px;line-height:1.3}
+  header .subtitle{font-size:11px;opacity:.8}
+  header .date-pill{font-size:11px;padding:3px 9px;margin-top:5px}
+  .index-card{padding:10px 12px;border-radius:8px;margin-bottom:12px}
+  .index-card h2{font-size:12px;margin-bottom:7px}
+  .index-card h2 .unit{display:block;margin-left:0;margin-top:1px}
+  .idx-table{font-size:11px}
+  .idx-table th,.idx-table td{padding:5px 5px}
+  .idx-table .val{font-size:14px}
+  .obs-card{padding:11px 12px;border-radius:8px;margin-bottom:12px}
+  .obs-card h2{font-size:13px;margin-bottom:8px}
+  .obs-group{margin-bottom:10px}
+  .obs-group-title{font-size:11px;margin-bottom:4px}
+  .obs-list{font-size:11.5px;padding-left:14px;line-height:1.7}
+  .obs-list li{margin:3px 0;word-break:break-word}
+  .obs-label{font-size:10px;padding:1px 5px;margin-right:4px;display:inline-block;margin-bottom:1px}
+  .tabs{gap:0;padding:0;border-radius:8px 8px 0 0;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab-btn{padding:10px 16px;font-size:13px;white-space:nowrap;flex:1 0 auto;border-radius:0}
+  .tab-btn:first-child{border-radius:8px 0 0 0}
+  .tab-btn:last-child{border-radius:0 8px 0 0}
+  .panel{padding:10px 10px 14px;border-radius:0 0 8px 8px}
+  .section-header{margin:8px 0 5px;flex-wrap:wrap;gap:5px;align-items:center}
+  .section-header .section-title{font-size:12px}
+  .mode-toggle{margin-left:0}
+  .mode-btn{padding:4px 10px;font-size:11px}
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -10px;padding:0 10px 4px}
+  .table-scroll::-webkit-scrollbar{height:3px}
+  .table-scroll::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+  table.data{font-size:11px;min-width:460px}
+  table.data th,table.data td{padding:6px 8px;white-space:nowrap}
+  table.data th:first-child,table.data td:first-child{position:sticky;left:0;background:#f5f7fa;z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.06)}
+  table.data tr:hover td:first-child{background:#eff2f6}
+  .sum td{background:#e8f0f9}
+  .sum td:first-child{background:#ddeaf7}
+  .code{font-size:10px;padding:1px 4px;margin-right:3px}
+  .foot{font-size:10px;padding:10px 12px;border-radius:8px;line-height:1.65;margin-top:12px}
+}
 </style></head><body><div class="wrap">
 
 <header><h1>13家金控　收盤價及法人買賣超</h1>
-<div class="subtitle">含大盤指數＋金融指數、外資/投信/自營商買賣超、持股增減、持股比例</div>
+<div class="subtitle">含大盤指數＋金融指數、外資/投信/自營商買賣超</div>
 <div class="date-pill">📅 最新交易日 2026-05-22</div></header>
 
 <div class="index-card"><h2>📈 大盤指數<span class="unit">收盤｜當日 / 3 日 / 5 日漲跌</span></h2>
-<table class="idx-table"><thead><tr><th style="text-align:left">指數</th><th>最新收盤</th><th>當日</th><th>3日</th><th>5日</th></tr></thead><tbody id="idxBody"></tbody></table></div>
+<div class="table-scroll"><table class="idx-table"><thead><tr><th style="text-align:left">指數</th><th>最新收盤</th><th>當日</th><th>3日</th><th>5日</th></tr></thead><tbody id="idxBody"></tbody></table></div></div>
 
 <div class="obs-card"><h2>📌 每日觀察<span class="date-tag">2026-05-22</span></h2>
 <div class="obs-group"><div class="obs-group-title">🔍 當日重點事件</div><ul class="obs-list">
@@ -97,23 +156,23 @@ th.sort-desc .sort-ind::before{content:'▼'}
   <div class="section-header"><h3 class="section-title">📊 法人買賣超（當日）</h3>
     <div class="mode-toggle"><button class="mode-btn active" onclick="setMode(1,'lots')" id="m1l">張數</button><button class="mode-btn" onclick="setMode(1,'amount')" id="m1a">金額</button></div>
   </div>
-  <table class="data" id="inst1"></table>
+  <div class="table-scroll"><table class="data" id="inst1"></table></div>
 </section>
 <section class="panel" id="p3">
   <div class="section-header"><h3 class="section-title">📊 法人買賣超（三日累計）</h3>
     <div class="mode-toggle"><button class="mode-btn active" onclick="setMode(3,'lots')" id="m3l">張數</button><button class="mode-btn" onclick="setMode(3,'amount')" id="m3a">金額</button></div>
   </div>
-  <table class="data" id="inst3"></table>
+  <div class="table-scroll"><table class="data" id="inst3"></table></div>
 </section>
 <section class="panel" id="p5">
   <div class="section-header"><h3 class="section-title">📊 法人買賣超（五日累計）</h3>
     <div class="mode-toggle"><button class="mode-btn active" onclick="setMode(5,'lots')" id="m5l">張數</button><button class="mode-btn" onclick="setMode(5,'amount')" id="m5a">金額</button></div>
   </div>
-  <table class="data" id="inst5"></table>
+  <div class="table-scroll"><table class="data" id="inst5"></table></div>
 </section>
 
 <div class="foot"><b>資料來源</b>：FinMind（個股股價、法人買賣超、外資持股）、TWSE MI_INDEX（指數）<br>
-<b>欄位定義</b>：外資 含外資自營商；自營商＝自行買賣＋避險｜<b>增減</b>＝持股比例變化（百分點）｜<b>持股</b>＝最新公布持股比率｜投信、自營商「持股」欄為近 90 日累計試算（非真實持股）<br>
+<b>欄位定義</b>：外資 含外資自營商；自營商＝自行買賣＋避險<br>
 <b>顏色</b>：<span class="pos">紅＝買超／上漲</span>　<span class="neg">綠＝賣超／下跌</span></div>
 
 <script>
@@ -194,9 +253,4 @@ function renderIdx(){
 }
 
 function switchTab(n){['1','3','5'].forEach(x=>{document.getElementById('p'+x).classList.toggle('active',x==n);document.getElementById('t'+x).classList.toggle('active',x==n);});}
-function setMode(n,m){state['inst_'+n].mode=m;document.getElementById('m'+n+'l').classList.toggle('active',m==='lots');document.getElementById('m'+n+'a').classList.toggle('active',m==='amount');renderInst(n);}
-
-renderIdx();
-[1,3,5].forEach(n=>{renderInst(n);});
-</script>
-</div></body></html>
+function setMode(n,m){state['ins
