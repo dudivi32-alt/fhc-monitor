@@ -1,0 +1,44 @@
+name: Update FHC data
+
+on:
+  schedule:
+    # 10:00 UTC = 18:00 Taipei, 平日（週一~週五），晚於三大法人資料公告時間
+    - cron: '0 10 * * 1-5'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch today's data
+        run: python scripts/fetch_today.py
+
+      - name: Merge into history
+        run: python scripts/update_history.py
+
+      - name: Build archive/index.html
+        run: python scripts/build_index.py
+
+      - name: Clean up temp file
+        run: rm -f data/_today.json
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/history.json archive/index.html
+          if git diff --cached --quiet; then
+            echo "No data changes (non-trading day or already up to date)."
+          else
+            git commit -m "update data $(date -u +%Y-%m-%d)"
+            git push
+          fi
