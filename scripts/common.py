@@ -148,6 +148,75 @@ def cls_of(n: float) -> str:
     return "pos" if n > 0 else "neg"
 
 
+# 重點觀察的視角個股（focus 區塊）
+FOCUS_CODE = "2883"
+
+
+def _momentum_label(p1_tot: float, p3_tot: float, p5_tot: float) -> str:
+    """Describe 1/3/5-day net buy/sell momentum for the focus stock."""
+    s1, s3, s5 = (1 if v > 0 else (-1 if v < 0 else 0) for v in (p1_tot, p3_tot, p5_tot))
+    if s1 >= 0 and s3 > 0 and s5 > 0:
+        return "連續買超" + ("、力道加強" if p1_tot > p3_tot / 3 else "、力道趨緩")
+    if s1 <= 0 and s3 < 0 and s5 < 0:
+        return "連續賣超" + ("、力道加強" if p1_tot < p3_tot / 3 else "、力道趨緩")
+    if s1 > 0 and s5 <= 0:
+        return "短線由賣轉買"
+    if s1 < 0 and s5 >= 0:
+        return "短線由買轉賣"
+    return "多空反覆"
+
+
+def build_focus(focus: dict, idx: dict) -> list:
+    """Build the '凱基金視角' observation block.
+
+    `focus` = {"name","code","p1","p3","p5"} (period metric dicts from build_index)
+    `idx`   = {"taiex": {1: pct, 3: pct, 5: pct}, "fin": {...}}
+    Returns [(cls, html), ...] like the other observation lists.
+    """
+    out = []
+    name = focus["name"]
+
+    # (1) 加權指數 vs 金融保險指數（當日/3日/5日）
+    spread = {n: (idx["fin"][n] - idx["taiex"][n]) if (idx["fin"].get(n) is not None and idx["taiex"].get(n) is not None) else None
+              for n in (1, 3, 5)}
+    sp1 = spread[1]
+    verdict = "金融族群相對大盤強勢" if (sp1 or 0) > 0 else ("金融族群相對大盤弱勢" if (sp1 or 0) < 0 else "金融族群與大盤同步")
+    idx_parts = "、".join(
+        f'{lbl} <span class="{cls_of(spread[n])}">{fmt_pct(spread[n]) if spread[n] is not None else "—"}</span>'
+        for n, lbl in ((1, "當日"), (3, "3日"), (5, "5日")))
+    out.append((cls_of(sp1),
+        f'<span class="obs-label">指數對比</span>金融保險指數相對加權指數：{idx_parts} — <b class="{cls_of(sp1)}">{verdict}</b>'
+        f'（加權 {fmt_pct(idx["taiex"][1])} / 金融 {fmt_pct(idx["fin"][1])}）'))
+
+    # (2) 凱基金 股價與 當日/3日/5日 買賣超
+    p1, p3, p5 = focus["p1"], focus["p3"], focus["p5"]
+    out.append((cls_of(p1["pct"]),
+        f'<span class="obs-label">股價表現</span>{name} 收盤 <b>{p1["close"]:.2f}</b>，'
+        f'當日 <b class="{cls_of(p1["pct"])}">{fmt_pct(p1["pct"])}</b>、'
+        f'3日 <span class="{cls_of(p3["pct"])}">{fmt_pct(p3["pct"])}</span>、'
+        f'5日 <span class="{cls_of(p5["pct"])}">{fmt_pct(p5["pct"])}</span>'))
+
+    momentum = _momentum_label(p1["totL"], p3["totL"], p5["totL"])
+    out.append((cls_of(p1["totL"]),
+        f'<span class="obs-label">法人動向</span>{name} 法人合計買賣超：'
+        f'當日 <b class="{cls_of(p1["totL"])}">{fmt_signed(p1["totL"])}</b> 張、'
+        f'3日 <span class="{cls_of(p3["totL"])}">{fmt_signed(p3["totL"])}</span> 張、'
+        f'5日 <span class="{cls_of(p5["totL"])}">{fmt_signed(p5["totL"])}</span> 張 — <b>{momentum}</b>'))
+
+    out.append(("neu",
+        f'<span class="obs-label">三大法人</span>外資 當日 <span class="{cls_of(p1["fL"])}">{fmt_signed(p1["fL"])}</span>'
+        f' / 3日 <span class="{cls_of(p3["fL"])}">{fmt_signed(p3["fL"])}</span>'
+        f' / 5日 <span class="{cls_of(p5["fL"])}">{fmt_signed(p5["fL"])}</span> 張；'
+        f'投信 當日 <span class="{cls_of(p1["tL"])}">{fmt_signed(p1["tL"])}</span>'
+        f' / 3日 <span class="{cls_of(p3["tL"])}">{fmt_signed(p3["tL"])}</span>'
+        f' / 5日 <span class="{cls_of(p5["tL"])}">{fmt_signed(p5["tL"])}</span> 張；'
+        f'自營商 當日 <span class="{cls_of(p1["dL"])}">{fmt_signed(p1["dL"])}</span>'
+        f' / 3日 <span class="{cls_of(p3["dL"])}">{fmt_signed(p3["dL"])}</span>'
+        f' / 5日 <span class="{cls_of(p5["dL"])}">{fmt_signed(p5["dL"])}</span> 張'))
+
+    return out
+
+
 def build_observations(rows: list[dict], taiex_pct: float, fin_pct: float) -> dict:
     """Reproduce the '每日觀察' text blocks from p1 data for all 13 stocks.
 

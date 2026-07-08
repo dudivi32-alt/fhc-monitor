@@ -119,6 +119,21 @@ def main() -> None:
     events_html = "\n".join(f'<li class="{c}">{html}</li>' for c, html in obs["events"]) + "\n"
     judgement_html = "".join(f'<li class="{c}">{html}</li>' for c, html in obs["judgement"])
 
+    # 凱基金視角區塊：指數 1/3/5 日變化 + 焦點個股 p1/p3/p5
+    focus_html = ""
+    focus_result = next((r for r in all_results if r["code"] == common.FOCUS_CODE), None)
+    if focus_result and len(idx_history) >= 2:
+        def idx_pct(key: str, n: int) -> float | None:
+            if len(idx_history) <= n:
+                return None
+            cur, base = idx_history[-1], idx_history[-1 - n]
+            return (cur[key] - base[key]) / base[key] * 100.0
+        idx_changes = {key: {n: idx_pct(key, n) for n in (1, 3, 5)} for key in ("taiex", "fin")}
+        focus_items = common.build_focus(focus_result, idx_changes)
+        focus_lis = "".join(f'<li class="{c}">{html}</li>' for c, html in focus_items)
+        focus_html = (f'<div class="obs-group"><div class="obs-group-title">🎯 {focus_result["name"]}視角</div>'
+                      f'<ul class="obs-list">{focus_lis}</ul></div>')
+
     data_json = {"all_results": all_results, "indexHistory": idx_history}
     history_json = {
         code: {"name": info["name"], "days": info["days"]}
@@ -130,6 +145,7 @@ def main() -> None:
     out = (template
            .replace("{{DATE}}", date_display)
            .replace("{{SOURCE}}", args.source)
+           .replace("{{OBS_FOCUS}}", focus_html)
            .replace("{{OBS_EVENTS}}", events_html)
            .replace("{{OBS_JUDGEMENT}}", judgement_html)
            .replace("{{HISTORY_JSON}}", json.dumps(history_json, ensure_ascii=False))

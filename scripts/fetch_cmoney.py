@@ -121,18 +121,87 @@ CONVERSATION_NOTE = (
 )
 
 
-def main() -> None:
-    today = dt.date.today().strftime("%Y%m%d")
+def backfill_holdings() -> None:
+    """One-off: patch existing day rows with 投信/自營商/法人 持股比率.
+
+    Only queries 日法人持股估計 (13 stocks × all dates ≈ 4.7k rows), so it
+    fits inside the 10000-row daily quota. Day rows are extended from
+    [.., fHold] to [.., fHold, tHold, dHold, totHold]."""
+    if not OUT_PATH.exists():
+        raise SystemExit(f"{OUT_PATH} not found — run a full fetch first")
+    history = json.loads(OUT_PATH.read_text(encoding="utf-8"))
     codes_in = ",".join(f"'{c}'" for c in common.STOCK_CODES)
 
     url, headers = load_faren_config()
     client = McpClient(url, headers)
     client.initialize()
-    print(f"[fetch_cmoney] MCP session established: {client.session_id}")
+
+    hold_map: dict[tuple[str, str], dict] = {}
+    today = dt.date.today().strftime("%Y%m%d")
+    for b_start, b_end in date_batches(START_DATE, today, BATCH_DAYS * 3):
+        print(f"[backfill] batch {b_start}~{b_end} ...", flush=True)
+        for r in client.execute_sql(
+            f"SELECT 日期, 股票代號, [投信持股比率(%)], [自營商持股比率(%)], [法人持股比率(%)] "
+            f"FROM 日法人持股估計 "
+            f"WHERE 股票代號 IN ({codes_in}) AND 日期 BETWEEN '{b_start}' AND '{b_end}'",
+            CONVERSATION_NOTE,
+        ):
+            hold_map[(r["日期"], r["股票代號"])] = r
+
+    patched = 0
+    for code in common.STOCK_CODES:
+        for day in history["stocks"][code]["days"]:
+            r = hold_map.get((day[0], code))
+            vals = [
+                r.get("投信持股比率(%)") if r else None,
+                r.get("自營商持股比率(%)") if r else None,
+                r.get("法人持股比率(%)") if r else None,
+            ]
+            day[8:] = vals
+            if r:
+                patched += 1
+    OUT_PATH.write_text(json.dumps(history, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"[backfill] patched {patched} day rows in {OUT_PATH}")
+
+
+def main() -> None:
+    if "--backfill-holdings" in sys.argv:
+        backfill_holdings()
+        return
+    full = "--full" in sys.argv
+    today = dt.date.today().strftime("%Y%m%d")
+    codes_in = ",".join(f"'{c}'" for c in common.STOCK_CODES)
+
+    # 增量模式（預設）：沿用既有檔案，只抓最後一個指數日期之後的新資料，
+    # 避免撞到 CMoney 單日查詢筆數上限（10000 筆）。--full 才全量重抓。
+    history: dict
+    fetch_start = START_DATE
+    if not full and OUT_PATH.exists():
+        history = json.loads(OUT_PATH.read_text(encoding="utf-8"))
+        history.setdefault("amounts", {code: {} for code in common.STOCK_CODES})
+        if history.get("index"):
+            last = history["index"][-1]["d"]
+            fetch_start = (dt.datetime.strptime(last, "%Y%m%d").date()
+                           + dt.timedelta(days=1)).strftime("%Y%m%d")
+        print(f"[fetch_cmoney] incremental mode: fetching from {fetch_start}")
+        if fetch_start > today:
+            print("[fetch_cmoney] already up to date, nothing to fetch")
+            return
+    else:
+        history = {
+            "stocks": {code: {"name": name, "days": []} for code, name in common.STOCKS},
+            "index": [],
+            "amounts": {code: {} for code in common.STOCK_CODES},
+        }
+        print(f"[fetch_cmoney] full mode: fetching from {fetch_start}")
+
+    url, headers = load_faren_config()
+    client = McpClient(url, headers)
+    client.initialize()
 
     price_rows: list[dict] = []
     inst_rows: list[dict] = []
-    for b_start, b_end in date_batches(START_DATE, today, BATCH_DAYS):
+    for b_start, b_end in date_batches(fetch_start, today, BATCH_DAYS):
         print(f"[fetch_cmoney] batch {b_start}~{b_end} ...", flush=True)
         price_rows += client.execute_sql(
             f"SELECT 日期, 股票代號, 收盤價, 成交量 FROM 日收盤表排行 "
@@ -142,7 +211,8 @@ def main() -> None:
         )
         inst_rows += client.execute_sql(
             f"SELECT 日期, 股票代號, 外資買賣超, 投信買賣超, 自營商買賣超, 買賣超合計, "
-            f"[外資持股比率(%)], [外資買賣超金額(千)], [投信買賣超金額(千)], "
+            f"[外資持股比率(%)], [投信持股比率(%)], [自營商持股比率(%)], [法人持股比率(%)], "
+            f"[外資買賣超金額(千)], [投信買賣超金額(千)], "
             f"[自營商買賣超金額(千)], [法人買賣超金額(千)] FROM 日法人持股估計 "
             f"WHERE 股票代號 IN ({codes_in}) AND 日期 BETWEEN '{b_start}' AND '{b_end}' "
             f"ORDER BY 日期, 股票代號",
@@ -151,7 +221,7 @@ def main() -> None:
 
     idx_rows = client.execute_sql(
         f"SELECT 日期, 股票代號, 收盤價 FROM 日收盤表排行 "
-        f"WHERE 股票代號 IN ('{TAIEX_CODE}','{FIN_CODE}') AND 日期 >= '{START_DATE}' "
+        f"WHERE 股票代號 IN ('{TAIEX_CODE}','{FIN_CODE}') AND 日期 >= '{fetch_start}' "
         f"ORDER BY 日期",
         CONVERSATION_NOTE,
     )
@@ -159,14 +229,13 @@ def main() -> None:
     print(f"[fetch_cmoney] rows: price={len(price_rows)} inst={len(inst_rows)} index={len(idx_rows)}")
 
     inst_map = {(r["日期"], r["股票代號"]): r for r in inst_rows}
-    history: dict = {
-        "stocks": {code: {"name": name, "days": []} for code, name in common.STOCKS},
-        "index": [],
-        "amounts": {code: {} for code in common.STOCK_CODES},
+    existing_dates = {
+        code: {d[0] for d in history["stocks"][code]["days"]}
+        for code in common.STOCK_CODES
     }
     for r in price_rows:
         code, date = r["股票代號"], r["日期"]
-        if r["收盤價"] is None:
+        if r["收盤價"] is None or date in existing_dates[code]:
             continue
         inst = inst_map.get((date, code), {})
         fL = inst.get("外資買賣超") or 0.0
@@ -177,7 +246,8 @@ def main() -> None:
             totL = fL + tL + dL
         history["stocks"][code]["days"].append([
             date, r["收盤價"], r["成交量"] or 0.0, fL, tL, dL, totL,
-            inst.get("外資持股比率(%)"),
+            inst.get("外資持股比率(%)"), inst.get("投信持股比率(%)"),
+            inst.get("自營商持股比率(%)"), inst.get("法人持股比率(%)"),
         ])
         # 真實買賣超金額（千元→百萬），供金額模式顯示,比用收盤價估算精確
         if inst.get("外資買賣超金額(千)") is not None:
@@ -194,10 +264,12 @@ def main() -> None:
             continue
         e = idx_by_date.setdefault(r["日期"], {"d": r["日期"]})
         e["taiex" if r["股票代號"] == TAIEX_CODE else "fin"] = r["收盤價"]
-    history["index"] = sorted(
-        (e for e in idx_by_date.values() if "taiex" in e and "fin" in e),
-        key=lambda e: e["d"],
-    )
+    existing_idx_dates = {e["d"] for e in history["index"]}
+    history["index"] += [
+        e for e in idx_by_date.values()
+        if "taiex" in e and "fin" in e and e["d"] not in existing_idx_dates
+    ]
+    history["index"].sort(key=lambda e: e["d"])
 
     for code in common.STOCK_CODES:
         history["stocks"][code]["days"].sort(key=lambda d: d[0])

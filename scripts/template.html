@@ -166,7 +166,7 @@ th.sort-desc .sort-ind::before{content:'▼'}
 
 <div class="obs-card"><h2>📌 每日觀察<span class="date-tag">{{DATE}}</span></h2>
 <div class="obs-group"><div class="obs-group-title">🔍 當日重點事件</div><ul class="obs-list">
-{{OBS_EVENTS}}</ul></div><div class="obs-group"><div class="obs-group-title">💡 綜合判斷</div><ul class="obs-list">{{OBS_JUDGEMENT}}</ul></div></div>
+{{OBS_EVENTS}}</ul></div>{{OBS_FOCUS}}<div class="obs-group"><div class="obs-group-title">💡 綜合判斷</div><ul class="obs-list">{{OBS_JUDGEMENT}}</ul></div></div>
 <nav class="tabs">
   <button class="tab-btn active" onclick="switchTab(1)" id="t1">當日</button>
   <button class="tab-btn" onclick="switchTab(3)" id="t3">三日累計</button>
@@ -237,6 +237,10 @@ th.sort-desc .sort-ind::before{content:'▼'}
   <div class="chart-wrap">
     <div class="chart-title">法人買賣超（張）</div>
     <div style="position:relative;height:120px"><canvas id="instChart"></canvas></div></canvas>
+  </div>
+  <div class="chart-wrap">
+    <div class="chart-title">三大法人持股比例（%）<span id="holdReadout" style="font-weight:400;color:#586069;font-size:11px;margin-left:8px"></span></div>
+    <div style="position:relative;height:150px"><canvas id="holdChart"></canvas></div>
   </div>
 </section>
 
@@ -406,6 +410,32 @@ function renderStockChart(code,startD,endD){
     data:{labels,datasets:[{data:vols,backgroundColor:'rgba(100,149,200,0.5)',borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y.toLocaleString()} 張`}}},
       scales:{x:commonX,y:{ticks:{font:{size:10}},grid:{color:'#f0f0f0'}}}}
+  });
+
+  // 持股比例（外資/投信/自營商/合計）— 沿用同一區間；hover 任一日期顯示四者數值
+  const fH=days.map(d=>d[7]??null);
+  const tH=days.map(d=>d[8]??null);
+  const dH=days.map(d=>d[9]??null);
+  const totH=days.map(d=>d[10]??null);
+  const holdReadout=document.getElementById('holdReadout');
+  const fmtH=v=>v==null?'—':v.toFixed(2)+'%';
+  const setReadout=i=>{holdReadout.textContent=
+    `${days[i][0].slice(0,4)}/${days[i][0].slice(4,6)}/${days[i][0].slice(6,8)}｜外資 ${fmtH(fH[i])}．投信 ${fmtH(tH[i])}．自營商 ${fmtH(dH[i])}．合計 ${fmtH(totH[i])}`;};
+  setReadout(days.length-1);
+  if(_ci.h) _ci.h.destroy();
+  _ci.h=new Chart(document.getElementById('holdChart'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'外資',data:fH,borderColor:'#1e5f8e',backgroundColor:'#1e5f8e',pointRadius:0,borderWidth:1.6,tension:0.1,spanGaps:true},
+      {label:'投信',data:tH,borderColor:'#e67e22',backgroundColor:'#e67e22',pointRadius:0,borderWidth:1.6,tension:0.1,spanGaps:true},
+      {label:'自營商',data:dH,borderColor:'#8e44ad',backgroundColor:'#8e44ad',pointRadius:0,borderWidth:1.6,tension:0.1,spanGaps:true},
+      {label:'三大法人合計',data:totH,borderColor:'#2c3e50',backgroundColor:'#2c3e50',pointRadius:0,borderWidth:2.2,tension:0.1,spanGaps:true},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+      onHover:(e,els,chart)=>{const pts=chart.getElementsAtEventForMode(e,'index',{intersect:false},true);if(pts.length)setReadout(pts[0].index);},
+      plugins:{legend:{labels:{font:{size:10},boxWidth:10}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y==null?'—':c.parsed.y.toFixed(2)+'%'}`}}},
+      scales:{x:commonX,y:{ticks:{font:{size:10},callback:v=>v+'%'},grid:{color:'#f0f0f0'}}}}
   });
 
   if(_ci.i) _ci.i.destroy();
