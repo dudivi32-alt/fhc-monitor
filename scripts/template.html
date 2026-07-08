@@ -164,9 +164,8 @@ th.sort-desc .sort-ind::before{content:'▼'}
 <div class="index-card"><h2>📈 大盤指數<span class="unit">收盤｜當日 / 3 日 / 5 日漲跌</span></h2>
 <div class="table-scroll"><table class="idx-table"><thead><tr><th style="text-align:left">指數</th><th>最新收盤</th><th>當日</th><th>3日</th><th>5日</th></tr></thead><tbody id="idxBody"></tbody></table></div></div>
 
-<div class="obs-card"><h2>📌 每日觀察<span class="date-tag">{{DATE}}</span></h2>
-<div class="obs-group"><div class="obs-group-title">🔍 當日重點事件</div><ul class="obs-list">
-{{OBS_EVENTS}}</ul></div>{{OBS_FOCUS}}<div class="obs-group"><div class="obs-group-title">💡 綜合判斷</div><ul class="obs-list">{{OBS_JUDGEMENT}}</ul></div></div>
+<div class="obs-card"><h2>📌 重點觀察及結論<span class="date-tag">{{DATE}}</span></h2>
+{{OBS_FOCUS}}</div>
 <nav class="tabs">
   <button class="tab-btn active" onclick="switchTab(1)" id="t1">當日</button>
   <button class="tab-btn" onclick="switchTab(3)" id="t3">三日累計</button>

@@ -166,11 +166,14 @@ def _momentum_label(p1_tot: float, p3_tot: float, p5_tot: float) -> str:
     return "多空反覆"
 
 
-def build_focus(focus: dict, idx: dict) -> list:
-    """Build the '凱基金視角' observation block.
+def build_focus(focus: dict, idx: dict, rows: list[dict] | None = None) -> list:
+    """Build the single '凱基金視角' observation block covering:
+    (1) TAIEX vs 金融保險指數, (2) focus-stock 1/3/5-day flows,
+    (3) 金控同業重點觀察 (peer comparison).
 
     `focus` = {"name","code","p1","p3","p5"} (period metric dicts from build_index)
     `idx`   = {"taiex": {1: pct, 3: pct, 5: pct}, "fin": {...}}
+    `rows`  = p1 rows for all 13 stocks ({"code","name","pct","fL","tL","totL",...})
     Returns [(cls, html), ...] like the other observation lists.
     """
     out = []
@@ -188,18 +191,26 @@ def build_focus(focus: dict, idx: dict) -> list:
         f'<span class="obs-label">指數對比</span>金融保險指數相對加權指數：{idx_parts} — <b class="{cls_of(sp1)}">{verdict}</b>'
         f'（加權 {fmt_pct(idx["taiex"][1])} / 金融 {fmt_pct(idx["fin"][1])}）'))
 
-    # (2) 凱基金 股價與 當日/3日/5日 買賣超
+    # (2) 凱基金 股價與 當日/3日/5日 買賣超（含同業排名）
     p1, p3, p5 = focus["p1"], focus["p3"], focus["p5"]
+    rank_pct = rank_tot = None
+    if rows:
+        rank_pct = sorted(rows, key=lambda r: -r["pct"]).index(
+            next(r for r in rows if r["code"] == focus["code"])) + 1
+        rank_tot = sorted(rows, key=lambda r: -r["totL"]).index(
+            next(r for r in rows if r["code"] == focus["code"])) + 1
+    rank_pct_txt = f'（13家中第 <b>{rank_pct}</b> 強）' if rank_pct else ''
+    rank_tot_txt = f'（買超排名第 <b>{rank_tot}</b>）' if rank_tot else ''
     out.append((cls_of(p1["pct"]),
         f'<span class="obs-label">股價表現</span>{name} 收盤 <b>{p1["close"]:.2f}</b>，'
-        f'當日 <b class="{cls_of(p1["pct"])}">{fmt_pct(p1["pct"])}</b>、'
+        f'當日 <b class="{cls_of(p1["pct"])}">{fmt_pct(p1["pct"])}</b>{rank_pct_txt}、'
         f'3日 <span class="{cls_of(p3["pct"])}">{fmt_pct(p3["pct"])}</span>、'
         f'5日 <span class="{cls_of(p5["pct"])}">{fmt_pct(p5["pct"])}</span>'))
 
     momentum = _momentum_label(p1["totL"], p3["totL"], p5["totL"])
     out.append((cls_of(p1["totL"]),
         f'<span class="obs-label">法人動向</span>{name} 法人合計買賣超：'
-        f'當日 <b class="{cls_of(p1["totL"])}">{fmt_signed(p1["totL"])}</b> 張、'
+        f'當日 <b class="{cls_of(p1["totL"])}">{fmt_signed(p1["totL"])}</b> 張{rank_tot_txt}、'
         f'3日 <span class="{cls_of(p3["totL"])}">{fmt_signed(p3["totL"])}</span> 張、'
         f'5日 <span class="{cls_of(p5["totL"])}">{fmt_signed(p5["totL"])}</span> 張 — <b>{momentum}</b>'))
 
@@ -214,94 +225,37 @@ def build_focus(focus: dict, idx: dict) -> list:
         f' / 3日 <span class="{cls_of(p3["dL"])}">{fmt_signed(p3["dL"])}</span>'
         f' / 5日 <span class="{cls_of(p5["dL"])}">{fmt_signed(p5["dL"])}</span> 張'))
 
+    # (3) 金控同業重點觀察
+    if rows:
+        peers = [r for r in rows if r["code"] != focus["code"]]
+        sum_tot = sum(r["totL"] for r in rows)
+        sum_f = sum(r["fL"] for r in rows)
+        sum_t = sum(r["tL"] for r in rows)
+        n_buy = sum(1 for r in rows if r["totL"] > 0)
+        n_sell = sum(1 for r in rows if r["totL"] < 0)
+        overall = "偏多" if sum_tot > 0 else ("偏空" if sum_tot < 0 else "持平")
+        leader = max(peers, key=lambda r: r["pct"])
+        laggard = min(peers, key=lambda r: r["pct"])
+        top_buy = max(peers, key=lambda r: r["totL"])
+        top_sell = min(peers, key=lambda r: r["totL"])
+        out.append((cls_of(sum_tot),
+            f'<span class="obs-label">同業風向</span>13家金控法人合計 '
+            f'<b class="{cls_of(sum_tot)}">{fmt_signed(sum_tot)}</b> 張'
+            f'（<b class="pos">{n_buy} 檔買超</b>、<b class="neg">{n_sell} 檔賣超</b>，整體 <b class="{cls_of(sum_tot)}">{overall}</b>；'
+            f'外資 <span class="{cls_of(sum_f)}">{fmt_signed(sum_f)}</span> 張、'
+            f'投信 <span class="{cls_of(sum_t)}">{fmt_signed(sum_t)}</span> 張）'))
+        out.append(("neu",
+            f'<span class="obs-label">同業焦點</span>同業領漲 <b class="{cls_of(leader["pct"])}">{leader["name"]} {fmt_pct(leader["pct"])}</b>、'
+            f'領跌 <b class="{cls_of(laggard["pct"])}">{laggard["name"]} {fmt_pct(laggard["pct"])}</b>；'
+            f'法人最捧 <b class="pos">{top_buy["name"]}（{fmt_signed(top_buy["totL"])} 張）</b>、'
+            f'最棄 <b class="neg">{top_sell["name"]}（{fmt_signed(top_sell["totL"])} 張）</b>'))
+        if rank_pct and rank_tot:
+            half = len(rows) / 2
+            stance = ("表現與籌碼同步領先同業" if (rank_pct <= half and rank_tot <= half) else
+                      ("股價落後但法人先行卡位" if rank_tot <= half else
+                       ("股價強但籌碼未跟上，留意追價風險" if rank_pct <= half else "表現與籌碼皆落後同業")))
+            out.append((cls_of(half - max(rank_pct, rank_tot) + 0.5),
+                f'<span class="obs-label">同業對照</span>{name} 當日漲幅第 <b>{rank_pct}</b>/13、'
+                f'法人買超第 <b>{rank_tot}</b>/13 — <b>{stance}</b>'))
+
     return out
-
-
-def build_observations(rows: list[dict], taiex_pct: float, fin_pct: float) -> dict:
-    """Reproduce the '每日觀察' text blocks from p1 data for all 13 stocks.
-
-    `rows` = list of {"code","name","close","pct","fL","tL","dL","totL","fHold","fHoldPrev"}
-    Returns {"events": [str], "judgement": [str]} — each string is the
-    inner content of one <li> (caller wraps with class + <li>).
-    """
-    events = []
-    judgement = []
-
-    leader = max(rows, key=lambda r: r["pct"])
-    laggard = min(rows, key=lambda r: r["pct"])
-    events.append((cls_of(leader["pct"]),
-        f'<b class="{cls_of(leader["pct"])}">{leader["name"]} {fmt_pct(leader["pct"])}</b> 領漲，'
-        f'外資 <span class="{cls_of(leader["fL"])}">{fmt_signed(leader["fL"])}</span> 張'))
-    events.append((cls_of(laggard["pct"]),
-        f'<b class="{cls_of(laggard["pct"])}">{laggard["name"]} {fmt_pct(laggard["pct"])}</b> 領跌，'
-        f'外資 <span class="{cls_of(laggard["fL"])}">{fmt_signed(laggard["fL"])}</span> 張'))
-
-    top_buy = max(rows, key=lambda r: r["fL"])
-    top_sell = min(rows, key=lambda r: r["fL"])
-    events.append((cls_of(top_buy["fL"]),
-        f'外資最多買超：<b>{top_buy["name"]}</b> <span class="{cls_of(top_buy["fL"])}">{fmt_signed(top_buy["fL"])}</span> 張'))
-    events.append((cls_of(top_sell["fL"]),
-        f'外資最多賣超：<b>{top_sell["name"]}</b> <span class="{cls_of(top_sell["fL"])}">{fmt_signed(top_sell["fL"])}</span> 張'))
-
-    sum_f = sum(r["fL"] for r in rows)
-    sum_t = sum(r["tL"] for r in rows)
-    sum_tot = sum(r["totL"] for r in rows)
-    events.append((cls_of(sum_tot),
-        f'13家金控當日法人合計 <b><span class="{cls_of(sum_tot)}">{fmt_signed(sum_tot)}</span> 張</b>'
-        f'（外資 <span class="{cls_of(sum_f)}">{fmt_signed(sum_f)}</span> 張、'
-        f'投信 <span class="{cls_of(sum_t)}">{fmt_signed(sum_t)}</span> 張）'))
-
-    fin_strength = "相對強勢" if fin_pct > taiex_pct else ("相對弱勢" if fin_pct < taiex_pct else "表現一致")
-    events.append(("neu",
-        f'當日加權指數 <b class="{cls_of(taiex_pct)}">{fmt_pct(taiex_pct)}</b>、'
-        f'金融指數 <b class="{cls_of(fin_pct)}">{fmt_pct(fin_pct)}</b> — '
-        f'金融族群<b class="{cls_of(fin_pct - taiex_pct)}">{fin_strength}</b>'))
-
-    count_pos = sum(1 for r in rows if r["totL"] > 0)
-    count_neg = sum(1 for r in rows if r["totL"] < 0)
-    overall = "偏多" if sum_tot > 0 else ("偏空" if sum_tot < 0 else "持平")
-    judgement.append((cls_of(sum_tot),
-        f'<span class="obs-label">法人態度</span>13 家金控中 <b>{count_pos} 檔</b>法人合計買超、'
-        f'<b>{count_neg} 檔</b>賣超，整體 <b class="{cls_of(sum_tot)}">{overall}</b>'
-        f'（外資 <span class="{cls_of(sum_f)}">{fmt_signed(sum_f)}</span> 張、'
-        f'投信 <span class="{cls_of(sum_t)}">{fmt_signed(sum_t)}</span> 張、'
-        f'法人合計 <b class="{cls_of(sum_tot)}"><span class="{cls_of(sum_tot)}">{fmt_signed(sum_tot)}</span> 張</b>）'))
-
-    buys = sorted([r for r in rows if r["totL"] > 0], key=lambda r: -r["totL"])[:3]
-    if buys:
-        parts = "、".join(f'<b class="pos">{r["name"]}({fmt_signed(r["totL"])})</b>' for r in buys)
-        judgement.append(("neu",
-            f'<span class="obs-label">資金流入</span>法人買超前 {len(buys)} 名：{parts}，'
-            f'合計 {fmt_signed(sum(r["totL"] for r in buys))} 張'))
-
-    sells = sorted([r for r in rows if r["totL"] < 0], key=lambda r: r["totL"])[:3]
-    if sells:
-        parts = "、".join(f'<b class="neg">{r["name"]}({fmt_signed(r["totL"])})</b>' for r in sells)
-        judgement.append(("neu",
-            f'<span class="obs-label">資金流出</span>法人賣超前 {len(sells)} 名：{parts}，'
-            f'合計 {fmt_signed(sum(r["totL"] for r in sells))} 張'))
-
-    direction = "方向一致（齊力買超）" if sum_f > 0 and sum_t > 0 else (
-        "方向一致（齊力賣超）" if sum_f < 0 and sum_t < 0 else "方向分歧")
-    judgement.append(("neu",
-        f'<span class="obs-label">外資 vs 投信</span>外資 <span class="{cls_of(sum_f)}">{fmt_signed(sum_f)}</span> 張、'
-        f'投信 <span class="{cls_of(sum_t)}">{fmt_signed(sum_t)}</span> 張 — <b>{direction}</b>'))
-
-    up_count = sum(1 for r in rows if r["pct"] > 0)
-    down_count = sum(1 for r in rows if r["pct"] < 0)
-    judgement.append(("neu",
-        f'<span class="obs-label">族群表現</span>金融指數 <b class="{cls_of(fin_pct)}">{fmt_pct(fin_pct)}</b> '
-        f'vs 大盤 {fmt_pct(taiex_pct)} — 金融族群<b class="{cls_of(fin_pct - taiex_pct)}">{fin_strength}</b>；'
-        f'13 家中 <b class="pos">{up_count} 檔上漲</b>、<b class="neg">{down_count} 檔下跌</b>'))
-
-    high_hold = [r for r in rows if r.get("fHold") is not None and r["fHold"] >= HIGH_HOLD_THRESHOLD]
-    if high_hold:
-        added = sum(1 for r in high_hold if (r.get("fHoldPrev") is not None and r["fHold"] > r["fHoldPrev"]))
-        reduced = sum(1 for r in high_hold if (r.get("fHoldPrev") is not None and r["fHold"] < r["fHoldPrev"]))
-        names = "、".join(r["name"] for r in high_hold)
-        judgement.append(("neu",
-            f'<span class="obs-label">高持股族</span>外資持股 ≥ {HIGH_HOLD_THRESHOLD:.0f}% 的 '
-            f'<b>{len(high_hold)} 檔</b>（{names}）中，今日 <b class="pos">{added} 檔被加碼</b>、'
-            f'{reduced} 檔被減碼'))
-
-    return {"events": events, "judgement": judgement}

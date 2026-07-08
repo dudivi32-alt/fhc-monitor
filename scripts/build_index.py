@@ -109,17 +109,8 @@ def main() -> None:
     if not idx_history:
         raise SystemExit(f"{history_path} has no index history yet")
     latest_date = idx_history[-1]["d"]
-    taiex_pct = fin_pct = 0.0
-    if len(idx_history) >= 2:
-        cur, prev = idx_history[-1], idx_history[-2]
-        taiex_pct = (cur["taiex"] - prev["taiex"]) / prev["taiex"] * 100.0
-        fin_pct = (cur["fin"] - prev["fin"]) / prev["fin"] * 100.0
 
-    obs = common.build_observations(obs_rows, taiex_pct, fin_pct)
-    events_html = "\n".join(f'<li class="{c}">{html}</li>' for c, html in obs["events"]) + "\n"
-    judgement_html = "".join(f'<li class="{c}">{html}</li>' for c, html in obs["judgement"])
-
-    # 凱基金視角區塊：指數 1/3/5 日變化 + 焦點個股 p1/p3/p5
+    # 單一觀察區塊（凱基金視角）：指數對比 + 焦點個股 1/3/5 日買賣超 + 金控同業重點
     focus_html = ""
     focus_result = next((r for r in all_results if r["code"] == common.FOCUS_CODE), None)
     if focus_result and len(idx_history) >= 2:
@@ -129,7 +120,7 @@ def main() -> None:
             cur, base = idx_history[-1], idx_history[-1 - n]
             return (cur[key] - base[key]) / base[key] * 100.0
         idx_changes = {key: {n: idx_pct(key, n) for n in (1, 3, 5)} for key in ("taiex", "fin")}
-        focus_items = common.build_focus(focus_result, idx_changes)
+        focus_items = common.build_focus(focus_result, idx_changes, obs_rows)
         focus_lis = "".join(f'<li class="{c}">{html}</li>' for c, html in focus_items)
         focus_html = (f'<div class="obs-group"><div class="obs-group-title">🎯 {focus_result["name"]}視角</div>'
                       f'<ul class="obs-list">{focus_lis}</ul></div>')
@@ -146,8 +137,6 @@ def main() -> None:
            .replace("{{DATE}}", date_display)
            .replace("{{SOURCE}}", args.source)
            .replace("{{OBS_FOCUS}}", focus_html)
-           .replace("{{OBS_EVENTS}}", events_html)
-           .replace("{{OBS_JUDGEMENT}}", judgement_html)
            .replace("{{HISTORY_JSON}}", json.dumps(history_json, ensure_ascii=False))
            .replace("{{DATA_JSON}}", json.dumps(data_json, ensure_ascii=False)))
 
