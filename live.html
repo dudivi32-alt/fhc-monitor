@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-TW"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>13家金控 — 截至 {{DATE}}</title>
+<title>13家金控 — 即時版</title>
 <style>
 :root{color-scheme:light}*{box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei","PingFang TC",sans-serif;margin:0;background:#f6f8fa;color:#1a1a1a;font-size:13px;line-height:1.5}
@@ -154,19 +154,32 @@ th.sort-desc .sort-ind::before{content:'▼'}
   .kpi-item{padding:5px 8px}
   .kpi-item b{font-size:13px}
 }
+/* ── 載入 / 錯誤 ── */
+#loadingOverlay{position:fixed;inset:0;background:rgba(246,248,250,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:999}
+#loadingOverlay .spinner{width:36px;height:36px;border:4px solid #d4dde6;border-top-color:#0a3d62;border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingOverlay .msg{color:#0a3d62;font-size:13px;font-weight:600}
+#loadingOverlay .sub{color:#586069;font-size:11px}
+#errorBanner{display:none;background:#fdecea;border:1px solid #f5b7b1;color:#c0392b;border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px}
 </style><script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-</head><body><div class="wrap">
+</head><body>
+
+<div id="loadingOverlay"><div class="spinner"></div><div class="msg">正在向 FinMind／TWSE 抓取最新資料…</div><div class="sub">13 檔金控 × 股價／法人買賣超／外資持股，首次載入約需數秒</div></div>
+
+<div class="wrap">
+
+<div id="errorBanner"></div>
 
 <header><h1>13家金控　收盤價及法人買賣超</h1>
-<div class="subtitle">含大盤指數＋金融指數、外資/投信/自營商買賣超</div>
-<div class="date-pill">📅 最新交易日 {{DATE}}</div></header>
+<div class="subtitle">含大盤指數＋金融指數、外資/投信/自營商買賣超（瀏覽器即時抓取）</div>
+<div class="date-pill" id="datePill">📅 載入中…</div></header>
 
 <div class="index-card"><h2>📈 大盤指數<span class="unit">收盤｜當日 / 3 日 / 5 日漲跌</span></h2>
 <div class="table-scroll"><table class="idx-table"><thead><tr><th style="text-align:left">指數</th><th>最新收盤</th><th>當日</th><th>3日</th><th>5日</th></tr></thead><tbody id="idxBody"></tbody></table></div></div>
 
-<div class="obs-card"><h2>📌 每日觀察<span class="date-tag">{{DATE}}</span></h2>
-<div class="obs-group"><div class="obs-group-title">🔍 當日重點事件</div><ul class="obs-list">
-{{OBS_EVENTS}}</ul></div><div class="obs-group"><div class="obs-group-title">💡 綜合判斷</div><ul class="obs-list">{{OBS_JUDGEMENT}}</ul></div></div>
+<div class="obs-card"><h2>📌 每日觀察<span class="date-tag" id="obsDateTag">載入中…</span></h2>
+<div class="obs-group"><div class="obs-group-title">🔍 當日重點事件</div><ul class="obs-list" id="obsEvents"></ul></div>
+<div class="obs-group"><div class="obs-group-title">💡 綜合判斷</div><ul class="obs-list" id="obsJudgement"></ul></div></div>
 <nav class="tabs">
   <button class="tab-btn active" onclick="switchTab(1)" id="t1">當日</button>
   <button class="tab-btn" onclick="switchTab(3)" id="t3">三日累計</button>
@@ -228,25 +241,231 @@ th.sort-desc .sort-ind::before{content:'▼'}
   <div class="chart-kpi" id="chartKpi"></div>
   <div class="chart-wrap">
     <div class="chart-title" id="chartPriceTitle">收盤價</div>
-    <div style="position:relative;height:180px"><canvas id="priceChart"></canvas></div></canvas>
+    <div style="position:relative;height:180px"><canvas id="priceChart"></canvas></div>
   </div>
   <div class="chart-wrap">
     <div class="chart-title">成交量（張）</div>
-    <div style="position:relative;height:100px"><canvas id="volChart"></canvas></div></canvas>
+    <div style="position:relative;height:100px"><canvas id="volChart"></canvas></div>
   </div>
   <div class="chart-wrap">
     <div class="chart-title">法人買賣超（張）</div>
-    <div style="position:relative;height:120px"><canvas id="instChart"></canvas></div></canvas>
+    <div style="position:relative;height:120px"><canvas id="instChart"></canvas></div>
   </div>
 </section>
 
-<div class="foot"><b>資料來源</b>：{{SOURCE}}<br>
+<div class="foot"><b>資料來源</b>：FinMind（個股股價、法人買賣超、外資持股）、TWSE MI_INDEX（指數）— 瀏覽器開啟本頁時即時呼叫，不經任何伺服器快取<br>
 <b>欄位定義</b>：外資 含外資自營商；自營商＝自行買賣＋避險<br>
 <b>顏色</b>：<span class="pos">紅＝買超／上漲</span>　<span class="neg">綠＝賣超／下跌</span></div>
 
+</div>
+
 <script>
-const HISTORY = {{HISTORY_JSON}};
-const DATA = {{DATA_JSON}};
+// ══════════════════════════ 資料抓取層 ══════════════════════════
+const STOCKS = [
+  ["2880","華南金"],["2881","富邦金"],["2882","國泰金"],["2883","凱基金"],
+  ["2884","玉山金"],["2885","元大金"],["2886","兆豐金"],["2887","台新新光金"],
+  ["2889","國票金"],["2890","永豐金"],["2891","中信金"],["2892","第一金"],["5880","合庫金"],
+];
+const HISTORY_START = "2025-01-01";
+const HIGH_HOLD_THRESHOLD = 25.0;
+const FINMIND_BASE = "https://api.finmindtrade.com/api/v4/data";
+const TWSE_MI_INDEX = "https://www.twse.com.tw/exchangeReport/MI_INDEX";
+const FOREIGN_NAMES = new Set(["Foreign_Investor","Foreign_Dealer_Self"]);
+const TRUST_NAMES = new Set(["Investment_Trust"]);
+const DEALER_NAMES = new Set(["Dealer_self","Dealer_Hedging"]);
+
+async function fetchFinMind(dataset, code, start){
+  const url = `${FINMIND_BASE}?dataset=${dataset}&data_id=${code}&start_date=${start}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`FinMind HTTP ${res.status} (${dataset}/${code})`);
+  const json = await res.json();
+  if(json.status !== 200) throw new Error(`FinMind ${dataset}/${code}: ${json.msg}`);
+  return json.data;
+}
+
+async function fetchTwseIndex(dateYYYYMMDD){
+  const url = `${TWSE_MI_INDEX}?response=json&date=${dateYYYYMMDD}&type=IND`;
+  const res = await fetch(url);
+  if(!res.ok) return null;
+  const json = await res.json();
+  const tables = json.tables || [];
+  let taiex=null, fin=null;
+  for(const t of tables){
+    if((t.title||'').includes('價格指數(臺灣證券交易所)')){
+      for(const row of (t.data||[])){
+        if(row[0]==='發行量加權股價指數') taiex=parseFloat(String(row[1]).replace(/,/g,''));
+        else if(row[0]==='金融保險類指數') fin=parseFloat(String(row[1]).replace(/,/g,''));
+      }
+    }
+  }
+  return (taiex==null||fin==null) ? null : {taiex, fin};
+}
+
+function splitInstitutional(rows){
+  const byDate = {};
+  for(const r of rows){
+    const date = r.date.replace(/-/g,'');
+    const net = (r.buy - r.sell)/1000;
+    const b = byDate[date] || (byDate[date] = {fL:0,tL:0,dL:0});
+    if(FOREIGN_NAMES.has(r.name)) b.fL += net;
+    else if(TRUST_NAMES.has(r.name)) b.tL += net;
+    else if(DEALER_NAMES.has(r.name)) b.dL += net;
+  }
+  for(const k in byDate) byDate[k].totL = byDate[k].fL + byDate[k].tL + byDate[k].dL;
+  return byDate;
+}
+
+async function loadAll(){
+  const perStock = {};
+  await Promise.all(STOCKS.map(async ([code])=>{
+    const [priceRows, instRows, holdRows] = await Promise.all([
+      fetchFinMind('TaiwanStockPrice', code, HISTORY_START),
+      fetchFinMind('TaiwanStockInstitutionalInvestorsBuySell', code, HISTORY_START),
+      fetchFinMind('TaiwanStockShareholding', code, HISTORY_START),
+    ]);
+    perStock[code] = {priceRows, instByDate: splitInstitutional(instRows), holdRows};
+  }));
+
+  const HISTORY = {};
+  for(const [code,name] of STOCKS){
+    const {priceRows, instByDate, holdRows} = perStock[code];
+    const holdSorted = [...holdRows].sort((a,b)=>a.date.localeCompare(b.date));
+    function holdOnOrBefore(dateStr){
+      let best=null;
+      for(const r of holdSorted){
+        const d = r.date.replace(/-/g,'');
+        if(d<=dateStr) best=r; else break;
+      }
+      return best ? best.ForeignInvestmentSharesRatio : null;
+    }
+    const days = priceRows.map(p=>{
+      const date = p.date.replace(/-/g,'');
+      const inst = instByDate[date] || {fL:0,tL:0,dL:0,totL:0};
+      return [date, p.close, p.Trading_Volume/1000, inst.fL, inst.tL, inst.dL, inst.totL, holdOnOrBefore(date)];
+    }).sort((a,b)=>a[0].localeCompare(b[0]));
+    HISTORY[code] = {name, days};
+  }
+
+  let commonDates = null;
+  for(const [code] of STOCKS){
+    const dates = new Set(HISTORY[code].days.map(d=>d[0]));
+    commonDates = commonDates ? new Set([...commonDates].filter(x=>dates.has(x))) : dates;
+  }
+  const sortedDates = [...commonDates].sort();
+  if(!sortedDates.length) throw new Error('找不到 13 檔金控的共同交易日');
+  const latestDate = sortedDates[sortedDates.length-1];
+
+  function periodMetrics(days, period){
+    const filtered = days.filter(d=>d[0]<=latestDate);
+    if(!filtered.length) return null;
+    const window = filtered.length>period ? filtered.slice(-period) : filtered;
+    const base = filtered.length>period ? filtered[filtered.length-period-1] : filtered[0];
+    const close = window[window.length-1][1];
+    const pct = (close-base[1])/base[1]*100;
+    const sum = (idx)=>window.reduce((s,d)=>s+d[idx],0);
+    const fL=sum(3), tL=sum(4), dL=sum(5), totL=sum(6);
+    const fK=window.reduce((s,d)=>s+d[3]*d[1]/1000,0);
+    const tK=window.reduce((s,d)=>s+d[4]*d[1]/1000,0);
+    const dK=window.reduce((s,d)=>s+d[5]*d[1]/1000,0);
+    return {close,pct,vol:sum(2),fL,tL,dL,totL,fK,tK,dK,totK:fK+tK+dK,fHold:window[window.length-1][7]};
+  }
+
+  const all_results = [];
+  const obsRows = [];
+  for(const [code,name] of STOCKS){
+    const days = HISTORY[code].days;
+    const p1=periodMetrics(days,1), p3=periodMetrics(days,3), p5=periodMetrics(days,5);
+    if(!p1) continue;
+    all_results.push({code,name,p1,p3,p5});
+    const filtered = days.filter(d=>d[0]<=latestDate);
+    const prevHold = filtered.length>=2 ? filtered[filtered.length-2][7] : null;
+    obsRows.push({code,name,close:p1.close,pct:p1.pct,fL:p1.fL,tL:p1.tL,dL:p1.dL,totL:p1.totL,fHold:p1.fHold,fHoldPrev:prevHold});
+  }
+
+  // 指數：只需最近 6 個共同交易日，供 1/3/5 日漲跌比較
+  const idxDates = sortedDates.slice(-6);
+  const idxResults = await Promise.all(idxDates.map(d=>fetchTwseIndex(d)));
+  let indexHistory = idxDates.map((d,i)=>({d, r:idxResults[i]})).filter(x=>x.r)
+    .map(x=>({d:x.d, taiex:x.r.taiex, fin:x.r.fin}));
+  // 若最新交易日 TWSE 尚未公布指數，往前找最近一個有資料的交易日代替
+  if(!indexHistory.length || indexHistory[indexHistory.length-1].d !== latestDate){
+    let d = new Date(+latestDate.slice(0,4), +latestDate.slice(4,6)-1, +latestDate.slice(6,8));
+    for(let i=0;i<10;i++){
+      const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+      const r = await fetchTwseIndex(ds);
+      if(r){ indexHistory.push({d:ds, taiex:r.taiex, fin:r.fin}); indexHistory.sort((a,b)=>a.d.localeCompare(b.d)); break; }
+      d.setDate(d.getDate()-1);
+    }
+  }
+
+  let taiexPct=0, finPct=0;
+  if(indexHistory.length>=2){
+    const cur=indexHistory[indexHistory.length-1], prev=indexHistory[indexHistory.length-2];
+    taiexPct=(cur.taiex-prev.taiex)/prev.taiex*100;
+    finPct=(cur.fin-prev.fin)/prev.fin*100;
+  }
+
+  return {HISTORY, DATA:{all_results, indexHistory}, obsRows, taiexPct, finPct, latestDate};
+}
+
+// ══════════════════════════ 每日觀察文字產生 ══════════════════════════
+function obsFmtSigned(n){ if(n==null||isNaN(n))return'—';const r=Math.round(n);if(r===0)return'0';return(r>0?'+':'')+r.toLocaleString('en-US'); }
+function obsFmtPct(n){if(n==null||isNaN(n))return'—';return(n>0?'+':'')+n.toFixed(2)+'%';}
+function obsClsOf(n){if(n==null||isNaN(n)||n===0)return'neu';return n>0?'pos':'neg';}
+
+function buildObservations(rows, taiexPct, finPct){
+  const events=[], judgement=[];
+  const leader = rows.reduce((a,b)=>b.pct>a.pct?b:a);
+  const laggard = rows.reduce((a,b)=>b.pct<a.pct?b:a);
+  events.push([obsClsOf(leader.pct), `<b class="${obsClsOf(leader.pct)}">${leader.name} ${obsFmtPct(leader.pct)}</b> 領漲，外資 <span class="${obsClsOf(leader.fL)}">${obsFmtSigned(leader.fL)}</span> 張`]);
+  events.push([obsClsOf(laggard.pct), `<b class="${obsClsOf(laggard.pct)}">${laggard.name} ${obsFmtPct(laggard.pct)}</b> 領跌，外資 <span class="${obsClsOf(laggard.fL)}">${obsFmtSigned(laggard.fL)}</span> 張`]);
+
+  const topBuy = rows.reduce((a,b)=>b.fL>a.fL?b:a);
+  const topSell = rows.reduce((a,b)=>b.fL<a.fL?b:a);
+  events.push([obsClsOf(topBuy.fL), `外資最多買超：<b>${topBuy.name}</b> <span class="${obsClsOf(topBuy.fL)}">${obsFmtSigned(topBuy.fL)}</span> 張`]);
+  events.push([obsClsOf(topSell.fL), `外資最多賣超：<b>${topSell.name}</b> <span class="${obsClsOf(topSell.fL)}">${obsFmtSigned(topSell.fL)}</span> 張`]);
+
+  const sumF = rows.reduce((s,r)=>s+r.fL,0), sumT = rows.reduce((s,r)=>s+r.tL,0), sumTot = rows.reduce((s,r)=>s+r.totL,0);
+  events.push([obsClsOf(sumTot), `13家金控當日法人合計 <b><span class="${obsClsOf(sumTot)}">${obsFmtSigned(sumTot)}</span> 張</b>（外資 <span class="${obsClsOf(sumF)}">${obsFmtSigned(sumF)}</span> 張、投信 <span class="${obsClsOf(sumT)}">${obsFmtSigned(sumT)}</span> 張）`]);
+
+  const finStrength = finPct>taiexPct ? '相對強勢' : (finPct<taiexPct ? '相對弱勢' : '表現一致');
+  events.push(['neu', `當日加權指數 <b class="${obsClsOf(taiexPct)}">${obsFmtPct(taiexPct)}</b>、金融指數 <b class="${obsClsOf(finPct)}">${obsFmtPct(finPct)}</b> — 金融族群<b class="${obsClsOf(finPct-taiexPct)}">${finStrength}</b>`]);
+
+  const countPos = rows.filter(r=>r.totL>0).length, countNeg = rows.filter(r=>r.totL<0).length;
+  const overall = sumTot>0?'偏多':(sumTot<0?'偏空':'持平');
+  judgement.push([obsClsOf(sumTot), `<span class="obs-label">法人態度</span>13 家金控中 <b>${countPos} 檔</b>法人合計買超、<b>${countNeg} 檔</b>賣超，整體 <b class="${obsClsOf(sumTot)}">${overall}</b>（外資 <span class="${obsClsOf(sumF)}">${obsFmtSigned(sumF)}</span> 張、投信 <span class="${obsClsOf(sumT)}">${obsFmtSigned(sumT)}</span> 張、法人合計 <b class="${obsClsOf(sumTot)}"><span class="${obsClsOf(sumTot)}">${obsFmtSigned(sumTot)}</span> 張</b>）`]);
+
+  const buys = rows.filter(r=>r.totL>0).sort((a,b)=>b.totL-a.totL).slice(0,3);
+  if(buys.length){
+    const parts = buys.map(r=>`<b class="pos">${r.name}(${obsFmtSigned(r.totL)})</b>`).join('、');
+    judgement.push(['neu', `<span class="obs-label">資金流入</span>法人買超前 ${buys.length} 名：${parts}，合計 ${obsFmtSigned(buys.reduce((s,r)=>s+r.totL,0))} 張`]);
+  }
+  const sells = rows.filter(r=>r.totL<0).sort((a,b)=>a.totL-b.totL).slice(0,3);
+  if(sells.length){
+    const parts = sells.map(r=>`<b class="neg">${r.name}(${obsFmtSigned(r.totL)})</b>`).join('、');
+    judgement.push(['neu', `<span class="obs-label">資金流出</span>法人賣超前 ${sells.length} 名：${parts}，合計 ${obsFmtSigned(sells.reduce((s,r)=>s+r.totL,0))} 張`]);
+  }
+
+  const direction = (sumF>0&&sumT>0) ? '方向一致（齊力買超）' : ((sumF<0&&sumT<0) ? '方向一致（齊力賣超）' : '方向分歧');
+  judgement.push(['neu', `<span class="obs-label">外資 vs 投信</span>外資 <span class="${obsClsOf(sumF)}">${obsFmtSigned(sumF)}</span> 張、投信 <span class="${obsClsOf(sumT)}">${obsFmtSigned(sumT)}</span> 張 — <b>${direction}</b>`]);
+
+  const upCount = rows.filter(r=>r.pct>0).length, downCount = rows.filter(r=>r.pct<0).length;
+  judgement.push(['neu', `<span class="obs-label">族群表現</span>金融指數 <b class="${obsClsOf(finPct)}">${obsFmtPct(finPct)}</b> vs 大盤 ${obsFmtPct(taiexPct)} — 金融族群<b class="${obsClsOf(finPct-taiexPct)}">${finStrength}</b>；13 家中 <b class="pos">${upCount} 檔上漲</b>、<b class="neg">${downCount} 檔下跌</b>`]);
+
+  const highHold = rows.filter(r=>r.fHold!=null && r.fHold>=HIGH_HOLD_THRESHOLD);
+  if(highHold.length){
+    const added = highHold.filter(r=>r.fHoldPrev!=null && r.fHold>r.fHoldPrev).length;
+    const reduced = highHold.filter(r=>r.fHoldPrev!=null && r.fHold<r.fHoldPrev).length;
+    const names = highHold.map(r=>r.name).join('、');
+    judgement.push(['neu', `<span class="obs-label">高持股族</span>外資持股 ≥ ${HIGH_HOLD_THRESHOLD.toFixed(0)}% 的 <b>${highHold.length} 檔</b>（${names}）中，今日 <b class="pos">${added} 檔被加碼</b>、${reduced} 檔被減碼`]);
+  }
+
+  return {events, judgement};
+}
+
+// ══════════════════════════ 渲染層（沿用現有版面邏輯） ══════════════════════════
+let HISTORY = {};
+let DATA = {all_results:[], indexHistory:[]};
 const state = {};
 
 function fmtSigned(n){ if(n==null||isNaN(n))return'—';const r=Math.round(n);if(r===0)return'0';return(r>0?'+':'')+r.toLocaleString('en-US'); }
@@ -313,8 +532,6 @@ function renderInst(period){
   });
 }
 
-
-
 // ── Sparkline ──
 function sparkSvg(code, n=20){
   const h = HISTORY[code];
@@ -374,7 +591,6 @@ function renderStockChart(code,startD,endD){
   const dL=days.map(d=>d[5]||0);
   const tot=days.map(d=>d[6]||0);
 
-  // KPI
   const first=prices[0],last=prices[prices.length-1];
   const chgPct=((last-first)/first*100).toFixed(2);
   const cumF=fL.reduce((a,b)=>a+b,0);
@@ -389,7 +605,6 @@ function renderStockChart(code,startD,endD){
     `<div class="kpi-item"><b style="color:${cumTot>=0?'#c0392b':'#27713a'}">${cumTot>=0?'+':''}${cumTot.toLocaleString()}</b>法人合計(張)</div>`;
   document.getElementById('chartPriceTitle').textContent=`${h.name}（${code}）收盤價`;
 
-  const maxTk=Math.max(...labels.length>60?Array.from({length:8},(_,i)=>Math.round(i*labels.length/7)):labels.map((_,i)=>i));
   const commonX={ticks:{maxTicksLimit:labels.length>120?8:labels.length>60?10:14,font:{size:10}},grid:{display:false}};
 
   if(_ci.p) _ci.p.destroy();
@@ -436,7 +651,32 @@ function renderIdx(){
 function switchTab(n){['1','3','5','chart'].forEach(x=>{document.getElementById('p'+x).classList.toggle('active',String(x)==String(n));document.getElementById('t'+x).classList.toggle('active',String(x)==String(n));});if(n==='chart'&&!window._chartReady){window._chartReady=true;requestAnimationFrame(()=>setRange('1Y'));}}
 function setMode(n,m){state['inst_'+n].mode=m;document.getElementById('m'+n+'l').classList.toggle('active',m==='lots');document.getElementById('m'+n+'a').classList.toggle('active',m==='amount');renderInst(n);}
 
-renderIdx();
-[1,3,5].forEach(n=>{renderInst(n);});
+// ══════════════════════════ 啟動 ══════════════════════════
+async function boot(){
+  try{
+    const result = await loadAll();
+    HISTORY = result.HISTORY;
+    DATA = result.DATA;
+    const dateDisplay = `${result.latestDate.slice(0,4)}-${result.latestDate.slice(4,6)}-${result.latestDate.slice(6)}`;
+    document.title = `13家金控 — 截至 ${dateDisplay}`;
+    document.getElementById('datePill').textContent = `📅 最新交易日 ${dateDisplay}`;
+    document.getElementById('obsDateTag').textContent = dateDisplay;
+
+    const obs = buildObservations(result.obsRows, result.taiexPct, result.finPct);
+    document.getElementById('obsEvents').innerHTML = obs.events.map(([c,html])=>`<li class="${c}">${html}</li>`).join('');
+    document.getElementById('obsJudgement').innerHTML = obs.judgement.map(([c,html])=>`<li class="${c}">${html}</li>`).join('');
+
+    renderIdx();
+    [1,3,5].forEach(n=>renderInst(n));
+    document.getElementById('loadingOverlay').style.display='none';
+  }catch(err){
+    console.error(err);
+    document.getElementById('loadingOverlay').style.display='none';
+    const banner = document.getElementById('errorBanner');
+    banner.style.display='block';
+    banner.innerHTML = `<b>資料載入失敗</b>：${err.message}。請重新整理頁面重試；若持續發生，可能是 FinMind／TWSE 服務暫時無法連線。`;
+  }
+}
+boot();
 </script>
-</div></body></html>
+</body></html>
