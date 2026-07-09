@@ -138,7 +138,8 @@ def backfill_holdings() -> None:
 
     hold_map: dict[tuple[str, str], dict] = {}
     today = dt.date.today().strftime("%Y%m%d")
-    for b_start, b_end in date_batches(START_DATE, today, BATCH_DAYS * 3):
+    # 批次不可過大：~70% 為交易日，13檔 × 交易日數必須 < 單次查詢 2000 筆上限
+    for b_start, b_end in date_batches(START_DATE, today, BATCH_DAYS * 2):
         print(f"[backfill] batch {b_start}~{b_end} ...", flush=True)
         for r in client.execute_sql(
             f"SELECT 日期, 股票代號, [投信持股比率(%)], [自營商持股比率(%)], [法人持股比率(%)] "
