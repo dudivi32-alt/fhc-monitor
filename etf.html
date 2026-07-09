@@ -107,14 +107,6 @@ svg{width:100%;height:auto;display:block}
   </table></div>
 </section>
 
-<section>
-  <h2>近20日買賣超排行（ETF × 金控）</h2>
-  <div class="cols2">
-    <div class="tblwrap"><table id="topbuy"><thead><tr><th>買超</th><th>金控</th><th>張數</th><th>估金額</th></tr></thead><tbody></tbody></table></div>
-    <div class="tblwrap"><table id="topsell"><thead><tr><th>賣超</th><th>金控</th><th>張數</th><th>估金額</th></tr></thead><tbody></tbody></table></div>
-  </div>
-</section>
-
 <ul class="foot">
   <li>「買賣超」定義為 ETF 申報持倉之股數變化（含初級市場申購買回帶動的自然增減與成分股調整），非集中市場逐筆買賣統計；1 張 = 1,000 股。</li>
   <li>主動式 ETF 依代號尾碼 A（主動式）與 T（主動式平衡型，00981T）判別；被動式含市值型、高股息、ESG、產業型等所有指數型 ETF。</li>
@@ -172,16 +164,6 @@ document.getElementById('kpis').innerHTML = [
       '<td class="'+cls(a.c20)+'">'+sgn(a.c20/1000)+'</td>'+
       '<td class="'+cls(amt)+'">'+(amt>0?'+':'')+amt.toFixed(1)+' 億</td></tr>';
   }).join('');
-}
-
-// ---- Top movers ----
-{
-  const rows=[...D.perEtf].sort((x,y)=>y.ch20-x.ch20);
-  const mk=(r)=>{const amt=r.ch20*D.avgP[r.stock]/1e8;
-    return '<tr><td>'+r.etf+' '+r.name+'</td><td>'+NAME[r.stock]+'</td>'+
-    '<td class="'+cls(r.ch20)+'">'+sgn(r.ch20/1000)+'</td><td class="'+cls(amt)+'">'+(amt>0?'+':'')+amt.toFixed(1)+' 億</td></tr>';};
-  document.querySelector('#topbuy tbody').innerHTML = rows.slice(0,10).map(mk).join('');
-  document.querySelector('#topsell tbody').innerHTML = rows.slice(-10).reverse().map(mk).join('');
 }
 
 // ---- 個股檢視 ----
