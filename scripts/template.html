@@ -349,7 +349,7 @@ function setRange(range){
   else if(range==='6M') sd.setMonth(sd.getMonth()-6);
   else if(range==='YTD'){sd.setMonth(0);sd.setDate(1);}
   else if(range==='1Y') sd.setFullYear(sd.getFullYear()-1);
-  else {sd.setFullYear(2025);sd.setMonth(0);sd.setDate(1);}
+  else {sd.setFullYear(2021);sd.setMonth(0);sd.setDate(1);}
   document.getElementById('dateStart').value=sd.toISOString().slice(0,10);
   document.getElementById('dateEnd').value=ed.toISOString().slice(0,10);
   document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
@@ -369,7 +369,7 @@ function renderStockChart(code,startD,endD){
   const h=HISTORY[code]; if(!h) return;
   const days=h.days.filter(d=>d[0]>=startD&&d[0]<=endD);
   if(!days.length) return;
-  const labels=days.map(d=>`${d[0].slice(4,6)}/${d[0].slice(6,8)}`);
+  const labels=days.map(d=>days.length>250?`${d[0].slice(0,4)}/${d[0].slice(4,6)}`:`${d[0].slice(4,6)}/${d[0].slice(6,8)}`);
   const prices=days.map(d=>d[1]);
   const vols=days.map(d=>d[2]);
   const fL=days.map(d=>d[3]||0);
