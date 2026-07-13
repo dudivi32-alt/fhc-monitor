@@ -121,12 +121,12 @@ CONVERSATION_NOTE = (
 )
 
 
-def backfill_holdings() -> None:
-    """One-off: patch existing day rows with 投信/自營商/法人 持股比率.
+def backfill_holdings(start: str, end: str) -> None:
+    """Patch existing day rows in [start, end] with 投信/自營商/法人 持股比率.
 
-    Only queries 日法人持股估計 (13 stocks × all dates ≈ 4.7k rows), so it
-    fits inside the 10000-row daily quota. Day rows are extended from
-    [.., fHold] to [.., fHold, tHold, dHold, totHold]."""
+    Queries only 日法人持股估計. Mind the 10000-row daily quota: one year
+    of 13 stocks ≈ 3.2k rows, so backfill at most ~3 years per day.
+    Day rows are extended from [.., fHold] to [.., fHold, tHold, dHold, totHold]."""
     if not OUT_PATH.exists():
         raise SystemExit(f"{OUT_PATH} not found — run a full fetch first")
     history = json.loads(OUT_PATH.read_text(encoding="utf-8"))
@@ -137,9 +137,8 @@ def backfill_holdings() -> None:
     client.initialize()
 
     hold_map: dict[tuple[str, str], dict] = {}
-    today = dt.date.today().strftime("%Y%m%d")
     # 批次不可過大：~70% 為交易日，13檔 × 交易日數必須 < 單次查詢 2000 筆上限
-    for b_start, b_end in date_batches(START_DATE, today, BATCH_DAYS * 2):
+    for b_start, b_end in date_batches(start, end, BATCH_DAYS * 2):
         print(f"[backfill] batch {b_start}~{b_end} ...", flush=True)
         for r in client.execute_sql(
             f"SELECT 日期, 股票代號, [投信持股比率(%)], [自營商持股比率(%)], [法人持股比率(%)] "
@@ -152,6 +151,8 @@ def backfill_holdings() -> None:
     patched = 0
     for code in common.STOCK_CODES:
         for day in history["stocks"][code]["days"]:
+            if not (start <= day[0] <= end):
+                continue
             r = hold_map.get((day[0], code))
             vals = [
                 r.get("投信持股比率(%)") if r else None,
@@ -167,7 +168,11 @@ def backfill_holdings() -> None:
 
 def main() -> None:
     if "--backfill-holdings" in sys.argv:
-        backfill_holdings()
+        i = sys.argv.index("--backfill-holdings")
+        args = sys.argv[i + 1:i + 3]
+        start = args[0] if len(args) > 0 else START_DATE
+        end = args[1] if len(args) > 1 else dt.date.today().strftime("%Y%m%d")
+        backfill_holdings(start, end)
         return
     full = "--full" in sys.argv
     today = dt.date.today().strftime("%Y%m%d")
