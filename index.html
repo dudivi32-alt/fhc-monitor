@@ -243,7 +243,7 @@ th.sort-desc .sort-ind::before{content:'▼'}
   </div>
 </section>
 
-<div class="foot"><b>資料來源</b>：FinMind＋TWSE 公開資料（CMoney FarenMCP 停機期間備援）　<a href="live.html">另有 FinMind 瀏覽器即時版 →</a><br>
+<div class="foot"><b>資料來源</b>：FinMind（個股股價/法人買賣超/外資持股）＋TWSE MI_INDEX（指數）公開資料　<a href="live.html">另有 FinMind 瀏覽器即時版 →</a><br>
 <b>欄位定義</b>：外資 含外資自營商；自營商＝自行買賣＋避險<br>
 <b>顏色</b>：<span class="pos">紅＝買超／上漲</span>　<span class="neg">綠＝賣超／下跌</span></div>
 
@@ -418,8 +418,11 @@ function renderStockChart(code,startD,endD){
   const totH=days.map(d=>d[10]??null);
   const holdReadout=document.getElementById('holdReadout');
   const fmtH=v=>v==null?'—':v.toFixed(2)+'%';
+  const allDays=h.days, lastT=[...allDays].reverse().find(d=>d[8]!=null);
+  const holdNote=(lastT&&lastT[0]<allDays[allDays.length-1][0])
+    ?`（投信/自營商/合計更新至 ${lastT[0].slice(0,4)}/${lastT[0].slice(4,6)}/${lastT[0].slice(6,8)}）`:'';
   const setReadout=i=>{holdReadout.textContent=
-    `${days[i][0].slice(0,4)}/${days[i][0].slice(4,6)}/${days[i][0].slice(6,8)}｜外資 ${fmtH(fH[i])}．投信 ${fmtH(tH[i])}．自營商 ${fmtH(dH[i])}．合計 ${fmtH(totH[i])}`;};
+    `${days[i][0].slice(0,4)}/${days[i][0].slice(4,6)}/${days[i][0].slice(6,8)}｜外資 ${fmtH(fH[i])}．投信 ${fmtH(tH[i])}．自營商 ${fmtH(dH[i])}．合計 ${fmtH(totH[i])}${holdNote}`;};
   setReadout(days.length-1);
   if(_ci.h) _ci.h.destroy();
   _ci.h=new Chart(document.getElementById('holdChart'),{
