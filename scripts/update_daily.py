@@ -55,6 +55,18 @@ for code, name in common.STOCKS:
     days.sort(key=lambda d: d[0])
     print(f"  {code} {name}: +{len([d for d in days if d[0] in added_dates])} new")
 
+# 回補最近幾天缺漏的外資持股比率（TWSE 20:00 後才公告，18:00 排程當天抓不到）
+for code, name in common.STOCKS:
+    days = history["stocks"][code]["days"]
+    for d in days[-4:]:
+        if d[7] is None:
+            rows = common.fetch_finmind("TaiwanStockShareholding", code,
+                                        f"{d[0][:4]}-{d[0][4:6]}-{d[0][6:]}")
+            for r in rows:
+                if r["date"].replace("-", "") == d[0]:
+                    d[7] = round(r["ForeignInvestmentSharesRatio"], 2)
+                    print(f"  {code} fHold backfilled for {d[0]}")
+
 # 指數：TWSE MI_INDEX 逐日
 d = start
 idx_existing = {e["d"] for e in history["index"]}
