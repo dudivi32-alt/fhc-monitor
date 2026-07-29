@@ -2,8 +2,8 @@ name: Update FHC data
 
 on:
   schedule:
-    # 10:00 UTC = 18:00 Taipei, 平日（週一~週五），晚於三大法人資料公告時間
-    - cron: '0 10 * * 1-5'
+    # 09:30 UTC = 17:30 Taipei, 平日（週一~週五）
+    - cron: '30 9 * * 1-5'
   workflow_dispatch: {}
 
 permissions:
