@@ -184,12 +184,13 @@ def build_focus(focus: dict, idx: dict, rows: list[dict] | None = None) -> list:
               for n in (1, 3, 5)}
     sp1 = spread[1]
     verdict = "金融族群相對大盤強勢" if (sp1 or 0) > 0 else ("金融族群相對大盤弱勢" if (sp1 or 0) < 0 else "金融族群與大盤同步")
-    idx_parts = "、".join(
-        f'{lbl} <span class="{cls_of(spread[n])}">{fmt_pct(spread[n]) if spread[n] is not None else "—"}</span>'
+    fin_parts = "、".join(
+        f'{lbl} <span class="{cls_of(idx["fin"].get(n))}">'
+        f'{fmt_pct(idx["fin"][n]) if idx["fin"].get(n) is not None else "—"}</span>'
         for n, lbl in ((1, "當日"), (3, "3日"), (5, "5日")))
-    out.append((cls_of(sp1),
-        f'<span class="obs-label">指數對比</span>金融保險指數相對加權指數：{idx_parts} — <b class="{cls_of(sp1)}">{verdict}</b>'
-        f'（加權 {fmt_pct(idx["taiex"][1])} / 金融 {fmt_pct(idx["fin"][1])}）'))
+    out.append((cls_of(idx["fin"].get(1)),
+        f'<span class="obs-label">指數對比</span>金融保險指數：{fin_parts} — <b class="{cls_of(sp1)}">{verdict}</b>'
+        f'（加權當日 {fmt_pct(idx["taiex"][1])}）'))
 
     # (2) 凱基金 股價與 當日/3日/5日 買賣超（含同業排名）
     p1, p3, p5 = focus["p1"], focus["p3"], focus["p5"]
@@ -247,8 +248,8 @@ def build_focus(focus: dict, idx: dict, rows: list[dict] | None = None) -> list:
         out.append(("neu",
             f'<span class="obs-label">同業焦點</span>同業領漲 <b class="{cls_of(leader["pct"])}">{leader["name"]} {fmt_pct(leader["pct"])}</b>、'
             f'領跌 <b class="{cls_of(laggard["pct"])}">{laggard["name"]} {fmt_pct(laggard["pct"])}</b>；'
-            f'法人最捧 <b class="pos">{top_buy["name"]}（{fmt_signed(top_buy["totL"])} 張）</b>、'
-            f'最棄 <b class="neg">{top_sell["name"]}（{fmt_signed(top_sell["totL"])} 張）</b>'))
+            f'法人買超第一 <b class="pos">{top_buy["name"]}（{fmt_signed(top_buy["totL"])} 張）</b>、'
+            f'法人賣超第一 <b class="neg">{top_sell["name"]}（{fmt_signed(top_sell["totL"])} 張）</b>'))
         if rank_pct and rank_tot:
             half = len(rows) / 2
             stance = ("表現與籌碼同步領先同業" if (rank_pct <= half and rank_tot <= half) else
