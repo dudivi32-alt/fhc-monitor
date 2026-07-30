@@ -126,13 +126,12 @@ def main() -> None:
     if args.start:
         start = parse_date(args.start)
     else:
-        # first date (across all stocks) whose row still lacks tHold
-        missing = [d[0] for s in stocks.values() for d in s["days"]
-                   if len(d) < 9 or d[8] is None]
-        if not missing:
-            print("[moneydj] nothing missing — done")
-            return
-        start = parse_date(min(missing))
+        # resume from the last day that already has a 投信 ratio, so the
+        # daily run only fetches the tail instead of rewriting history
+        known = [d[0] for s in stocks.values() for d in s["days"]
+                 if len(d) > 8 and d[8] is not None]
+        start = (parse_date(max(known)) if known
+                 else end - dt.timedelta(days=30))
     # MoneyDJ 自訂區間僅提供一年內資料
     start = max(start, end - dt.timedelta(days=360))
     print(f"[moneydj] range {start} ~ {end}")
