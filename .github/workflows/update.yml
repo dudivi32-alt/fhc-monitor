@@ -31,6 +31,10 @@ jobs:
       - name: Update main page history (FinMind + TWSE)
         run: python scripts/update_daily.py
 
+      - name: Backfill 投信/自營商持股比率 (MoneyDJ)
+        run: python scripts/fetch_moneydj_holdings.py
+        continue-on-error: true
+
       - name: Build index.html
         run: >
           python scripts/build_index.py
