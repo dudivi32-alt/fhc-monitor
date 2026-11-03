@@ -331,6 +331,7 @@ async function loadAll(){
   }));
 
   const HISTORY = {};
+  let pendingDate = null;
   for(const [code,name] of STOCKS){
     const {priceRows, instByDate, holdRows} = perStock[code];
     const holdSorted = [...holdRows].sort((a,b)=>a.date.localeCompare(b.date));
@@ -342,9 +343,15 @@ async function loadAll(){
       }
       return best ? best.ForeignInvestmentSharesRatio : null;
     }
-    const days = priceRows.map(p=>{
+    // 法人買賣超約 16:00 後才公告、FinMind 更晚；股價已出但法人未出的日期先不收，
+    // 避免把缺的法人資料當成 0（與主頁 update_daily.py 規則一致）
+    for(const p of priceRows){
+      const dt=p.date.replace(/-/g,'');
+      if(!instByDate[dt] && (!pendingDate || dt>pendingDate)) pendingDate=dt;
+    }
+    const days = priceRows.filter(p=>instByDate[p.date.replace(/-/g,'')]).map(p=>{
       const date = p.date.replace(/-/g,'');
-      const inst = instByDate[date] || {fL:0,tL:0,dL:0,totL:0};
+      const inst = instByDate[date];
       return [date, p.close, p.Trading_Volume/1000, inst.fL, inst.tL, inst.dL, inst.totL, holdOnOrBefore(date),
               p.Trading_money!=null ? p.Trading_money/1e6 : null];
     }).sort((a,b)=>a[0].localeCompare(b[0]));
@@ -411,7 +418,8 @@ async function loadAll(){
     finPct=(cur.fin-prev.fin)/prev.fin*100;
   }
 
-  return {HISTORY, DATA:{all_results, indexHistory}, obsRows, taiexPct, finPct, latestDate};
+  return {HISTORY, DATA:{all_results, indexHistory}, obsRows, taiexPct, finPct, latestDate,
+          pendingDate: pendingDate && pendingDate>latestDate ? pendingDate : null};
 }
 
 // ══════════════════════════ 每日觀察文字產生 ══════════════════════════
@@ -679,7 +687,8 @@ async function boot(){
     DATA = result.DATA;
     const dateDisplay = `${result.latestDate.slice(0,4)}-${result.latestDate.slice(4,6)}-${result.latestDate.slice(6)}`;
     document.title = `13家金控 — 截至 ${dateDisplay}`;
-    document.getElementById('datePill').textContent = `📅 最新交易日 ${dateDisplay}`;
+    document.getElementById('datePill').textContent = `📅 最新交易日 ${dateDisplay}`+
+      (result.pendingDate?`（${result.pendingDate.slice(4,6)}/${result.pendingDate.slice(6)} 收盤價已出，法人買賣超 FinMind 尚未公布，晚點重新整理即可）`:'');
     document.getElementById('obsDateTag').textContent = dateDisplay;
 
     const obs = buildObservations(result.obsRows, result.taiexPct, result.finPct);
