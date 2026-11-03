@@ -234,6 +234,10 @@ th.sort-desc .sort-ind::before{content:'▼'}
     <div style="position:relative;height:100px"><canvas id="volChart"></canvas></div></canvas>
   </div>
   <div class="chart-wrap">
+    <div class="chart-title">成交值（百萬元）</div>
+    <div style="position:relative;height:100px"><canvas id="amtChart"></canvas></div>
+  </div>
+  <div class="chart-wrap">
     <div class="chart-title">法人買賣超（張）</div>
     <div style="position:relative;height:120px"><canvas id="instChart"></canvas></div></canvas>
   </div>
@@ -256,6 +260,7 @@ function fmtSigned(n){ if(n==null||isNaN(n))return'—';const r=Math.round(n);if
 function fmtSignedDec(n){ if(n==null||isNaN(n))return'—';if(Math.abs(n)<0.05)return'0';return(n>0?'+':'')+n.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1}); }
 function fmtPrice(n){return n==null?'—':n.toFixed(2);}
 function fmtPct(n){if(n==null||isNaN(n))return'—';return(n>0?'+':'')+n.toFixed(2)+'%';}
+function fmtAmt(n){return n==null||isNaN(n)?'—':Math.round(n).toLocaleString('en-US');}
 function fmtInt(n){return n==null?'—':Math.round(n).toLocaleString('en-US');}
 function clsOf(n){if(n==null||isNaN(n)||n===0)return'neu';return n>0?'pos':'neg';}
 
@@ -281,35 +286,36 @@ function renderInst(period){
   const st=state[k]; const isLots=st.mode==='lots';
   const cols=isLots?[
     ['股票','code'],['走勢(20日)','_spark'],['外資(張)','fL'],['投信(張)','tL'],['自營商(張)','dL'],['法人合計(張)','totL'],
-    ['收盤價','close'],[period===1?'漲跌':period+'日漲跌','pct'],[period===1?'成交量(張)':period+'日成交量(張)','vol'],
+    ['收盤價','close'],[period===1?'漲跌':period+'日漲跌','pct'],[period===1?'成交量(張)':period+'日成交量(張)','vol'],[period===1?'成交值(百萬)':period+'日成交值(百萬)','amt'],
   ]:[
     ['股票','code'],['走勢(20日)','_spark'],['外資(百萬)','fK'],['投信(百萬)','tK'],['自營商(百萬)','dK'],['法人合計(百萬)','totK'],
-    ['收盤價','close'],[period===1?'漲跌':period+'日漲跌','pct'],[period===1?'成交量(張)':period+'日成交量(張)','vol'],
+    ['收盤價','close'],[period===1?'漲跌':period+'日漲跌','pct'],[period===1?'成交量(張)':period+'日成交量(張)','vol'],[period===1?'成交值(百萬)':period+'日成交值(百萬)','amt'],
   ];
   const rows=DATA.all_results.map(r=>({code:r.code,name:r.name,m:r['p'+period]}));
   const sorted=sortRows(rows,st.sortKey,st.sortDir);
   const head='<thead><tr>'+cols.map(c=>thHtml(c[0],c[1],st)).join('')+'</tr></thead>';
-  let body='<tbody>'; let sumF=0,sumT=0,sumD=0,sumAll=0;
+  let body='<tbody>'; let sumF=0,sumT=0,sumD=0,sumAll=0,sumAmt=0,amtOk=true;
   for(const r of sorted){
     const m=r.m;
+    if(m.amt==null)amtOk=false;else sumAmt+=m.amt;
     if(isLots){
       sumF+=m.fL;sumT+=m.tL;sumD+=m.dL;sumAll+=m.totL;
       body+=`<tr><td><span class="code">${r.code}</span>${r.name}</td>
         <td>${sparkSvg(r.code)}</td>
         <td class="${clsOf(m.fL)}">${fmtSigned(m.fL)}</td><td class="${clsOf(m.tL)}">${fmtSigned(m.tL)}</td>
         <td class="${clsOf(m.dL)}">${fmtSigned(m.dL)}</td><td class="${clsOf(m.totL)}"><b>${fmtSigned(m.totL)}</b></td>
-        <td>${fmtPrice(m.close)}</td><td class="${clsOf(m.pct)}">${fmtPct(m.pct)}</td><td>${fmtInt(m.vol)}</td></tr>`;
+        <td>${fmtPrice(m.close)}</td><td class="${clsOf(m.pct)}">${fmtPct(m.pct)}</td><td>${fmtInt(m.vol)}</td><td>${fmtAmt(m.amt)}</td></tr>`;
     } else {
       sumF+=m.fK;sumT+=m.tK;sumD+=m.dK;sumAll+=m.totK;
       body+=`<tr><td><span class="code">${r.code}</span>${r.name}</td>
         <td>${sparkSvg(r.code)}</td>
         <td class="${clsOf(m.fK)}">${fmtSignedDec(m.fK)}</td><td class="${clsOf(m.tK)}">${fmtSignedDec(m.tK)}</td>
         <td class="${clsOf(m.dK)}">${fmtSignedDec(m.dK)}</td><td class="${clsOf(m.totK)}"><b>${fmtSignedDec(m.totK)}</b></td>
-        <td>${fmtPrice(m.close)}</td><td class="${clsOf(m.pct)}">${fmtPct(m.pct)}</td><td>${fmtInt(m.vol)}</td></tr>`;
+        <td>${fmtPrice(m.close)}</td><td class="${clsOf(m.pct)}">${fmtPct(m.pct)}</td><td>${fmtInt(m.vol)}</td><td>${fmtAmt(m.amt)}</td></tr>`;
     }
   }
   const sf=isLots?fmtSigned:fmtSignedDec;
-  body+=`<tr class="sum"><td>13家合計</td><td></td><td class="${clsOf(sumF)}">${sf(sumF)}</td><td class="${clsOf(sumT)}">${sf(sumT)}</td><td class="${clsOf(sumD)}">${sf(sumD)}</td><td class="${clsOf(sumAll)}">${sf(sumAll)}</td><td colspan="3"></td></tr></tbody>`;
+  body+=`<tr class="sum"><td>13家合計</td><td></td><td class="${clsOf(sumF)}">${sf(sumF)}</td><td class="${clsOf(sumT)}">${sf(sumT)}</td><td class="${clsOf(sumD)}">${sf(sumD)}</td><td class="${clsOf(sumAll)}">${sf(sumAll)}</td><td colspan="3"></td><td>${amtOk?fmtAmt(sumAmt):'—'}</td></tr></tbody>`;
   document.getElementById('inst'+period).innerHTML=head+body;
   document.querySelectorAll('#inst'+period+' th').forEach(th=>{
     th.onclick=()=>{const kk=th.dataset.key;if(st.sortKey===kk)st.sortDir=st.sortDir==='asc'?'desc':'asc';else{st.sortKey=kk;st.sortDir='asc';}renderInst(period);};
@@ -372,6 +378,7 @@ function renderStockChart(code,startD,endD){
   const labels=days.map(d=>days.length>250?`${d[0].slice(0,4)}/${d[0].slice(4,6)}`:`${d[0].slice(4,6)}/${d[0].slice(6,8)}`);
   const prices=days.map(d=>d[1]);
   const vols=days.map(d=>d[2]);
+  const amts=days.map(d=>d[11]??null);
   const fL=days.map(d=>d[3]||0);
   const tL=days.map(d=>d[4]||0);
   const dL=days.map(d=>d[5]||0);
@@ -384,12 +391,15 @@ function renderStockChart(code,startD,endD){
   const cumTot=tot.reduce((a,b)=>a+b,0);
   const fHoldLatest=(()=>{const r=DATA.all_results.find(x=>x.code===code);return r&&r.p1?r.p1.fHold:null;})();
   const col=last>=first?'#c0392b':'#27713a';
+  const amtVals=amts.filter(v=>v!=null);
+  const avgAmt=amtVals.length?amtVals.reduce((a,b)=>a+b,0)/amtVals.length:null;
   document.getElementById('chartKpi').innerHTML=
     `<div class="kpi-item"><b style="color:${col}">${last.toFixed(2)}</b>最新收盤</div>`+
     `<div class="kpi-item"><b style="color:${col}">${chgPct>0?'+':''}${chgPct}%</b>區間漲跌</div>`+
     (fHoldLatest!=null?`<div class="kpi-item"><b>${fHoldLatest}%</b>外資持股</div>`:'') +
     `<div class="kpi-item"><b style="color:${cumF>=0?'#c0392b':'#27713a'}">${cumF>=0?'+':''}${cumF.toLocaleString()}</b>外資累計(張)</div>`+
-    `<div class="kpi-item"><b style="color:${cumTot>=0?'#c0392b':'#27713a'}">${cumTot>=0?'+':''}${cumTot.toLocaleString()}</b>法人合計(張)</div>`;
+    `<div class="kpi-item"><b style="color:${cumTot>=0?'#c0392b':'#27713a'}">${cumTot>=0?'+':''}${cumTot.toLocaleString()}</b>法人合計(張)</div>`+
+    (avgAmt!=null?`<div class="kpi-item"><b>${fmtAmt(avgAmt)}</b>區間日均成交值(百萬)</div>`:'');
   document.getElementById('chartPriceTitle').textContent=`${h.name}（${code}）收盤價`;
 
   const maxTk=Math.max(...labels.length>60?Array.from({length:8},(_,i)=>Math.round(i*labels.length/7)):labels.map((_,i)=>i));
@@ -408,6 +418,14 @@ function renderStockChart(code,startD,endD){
     type:'bar',
     data:{labels,datasets:[{data:vols,backgroundColor:'rgba(100,149,200,0.5)',borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y.toLocaleString()} 張`}}},
+      scales:{x:commonX,y:{ticks:{font:{size:10}},grid:{color:'#f0f0f0'}}}}
+  });
+
+  if(_ci.a) _ci.a.destroy();
+  _ci.a=new Chart(document.getElementById('amtChart'),{
+    type:'bar',
+    data:{labels,datasets:[{data:amts,backgroundColor:'rgba(214,137,16,0.55)',borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${fmtAmt(c.parsed.y)} 百萬元`}}},
       scales:{x:commonX,y:{ticks:{font:{size:10}},grid:{color:'#f0f0f0'}}}}
   });
 

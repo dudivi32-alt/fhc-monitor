@@ -2,6 +2,7 @@
 from FinMind (stocks) + TWSE MI_INDEX (indices) — the primary public data
 sources as of 2026-07-16. 投信/自營商/合計持股比率 and real amounts are
 CMoney-only columns and stay None for new days.
+Column 11 = 成交值（百萬元，FinMind Trading_money / 1e6）.
 
 Run after ~16:00 Taipei (institutional data publish time):
   python scripts/update_daily.py
@@ -24,6 +25,8 @@ start = (dt.datetime.strptime(last_date, "%Y%m%d").date() + dt.timedelta(days=1)
 today = dt.date.today()
 if start > today:
     print("already up to date")
+    common.backfill_trading_value(history)
+    HISTORY_PATH.write_text(json.dumps(history, ensure_ascii=False, indent=1), encoding="utf-8")
     sys.exit(0)
 start_s = start.strftime("%Y-%m-%d")
 end_s = today.strftime("%Y-%m-%d")
@@ -50,7 +53,8 @@ for code, name in common.STOCKS:
         fHold = hold_by_date.get(date)
         days.append([date, p["close"], p["Trading_Volume"] / 1000.0,
                      fL, tL, dL, inst.get("totL", fL + tL + dL),
-                     round(fHold, 2) if fHold is not None else None, None, None, None])
+                     round(fHold, 2) if fHold is not None else None, None, None, None,
+                     round(p["Trading_money"] / 1e6, 1) if p.get("Trading_money") is not None else None])
         added_dates.add(date)
     days.sort(key=lambda d: d[0])
     print(f"  {code} {name}: +{len([d for d in days if d[0] in added_dates])} new")
@@ -79,6 +83,10 @@ while d <= today:
             print(f"  index {ds}: taiex={r['taiex']} fin={r['fin']}")
     d += dt.timedelta(days=1)
 history["index"].sort(key=lambda e: e["d"])
+
+# 成交值（百萬元）：補齊歷史缺漏（首次執行會一次回補全部歷史）
+print("backfilling 成交值 ...")
+common.backfill_trading_value(history)
 
 HISTORY_PATH.write_text(json.dumps(history, ensure_ascii=False, indent=1), encoding="utf-8")
 print(f"done. latest = {history['index'][-1]['d']}")

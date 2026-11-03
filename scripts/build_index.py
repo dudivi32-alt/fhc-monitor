@@ -49,6 +49,8 @@ def period_metrics(days: list[list], period: int, amounts: dict | None = None) -
     tL = sum(d[4] for d in window)
     dL = sum(d[5] for d in window)
     totL = sum(d[6] for d in window)
+    amts = [d[11] if len(d) > 11 else None for d in window]
+    amt = sum(amts) if all(a is not None for a in amts) else None  # 成交值（百萬元）
     if amounts and all(d[0] in amounts for d in window):
         fK = sum(amounts[d[0]][0] for d in window)
         tK = sum(amounts[d[0]][1] for d in window)
@@ -60,7 +62,7 @@ def period_metrics(days: list[list], period: int, amounts: dict | None = None) -
         dK = sum(d[5] * d[1] / 1000.0 for d in window)
         totK = fK + tK + dK
     return {
-        "close": close, "pct": pct, "vol": vol,
+        "close": close, "pct": pct, "vol": vol, "amt": amt,
         "fL": fL, "tL": tL, "dL": dL, "totL": totL,
         "fK": fK, "tK": tK, "dK": dK, "totK": totK,
         "fHold": window[-1][7],

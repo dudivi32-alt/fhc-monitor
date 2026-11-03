@@ -75,6 +75,41 @@ def fetch_finmind(dataset: str, data_id: str, start_date: str, end_date: str | N
     return payload.get("data", [])
 
 
+def backfill_trading_value(history: dict, fetch=None) -> int:
+    """補齊 days[i][11]＝成交值（百萬元）。
+
+    每檔找出最早缺成交值的日期，從那天起一次抓 FinMind TaiwanStockPrice
+    （Trading_money，元）回填。update_daily 新增的列已帶成交值，平常不會有缺漏，
+    只有第一次執行（回補 2021 起全部歷史）會實際發出請求。
+    回傳補了幾筆。"""
+    fetch = fetch or fetch_finmind
+    filled = 0
+    for code, name in STOCKS:
+        days = history["stocks"].get(code, {}).get("days", [])
+        missing = [d for d in days if len(d) < 12 or d[11] is None]
+        if not missing:
+            continue
+        start = missing[0][0]
+        try:
+            rows = fetch("TaiwanStockPrice", code, f"{start[:4]}-{start[4:6]}-{start[6:]}")
+        except Exception as e:  # noqa: BLE001 — 抓不到就下次再補，不中斷主流程
+            print(f"  [{code}] 成交值回補失敗：{e}")
+            continue
+        money = {r["date"].replace("-", ""): r.get("Trading_money") for r in rows}
+        n = 0
+        for d in missing:
+            m = money.get(d[0])
+            if m is None:
+                continue
+            while len(d) < 12:
+                d.append(None)
+            d[11] = round(m / 1e6, 1)
+            n += 1
+        filled += n
+        print(f"  [{code}] {name}: 成交值補 {n} 筆")
+    return filled
+
+
 def fetch_twse_index(date_yyyymmdd: str) -> dict | None:
     """Fetch TAIEX + 金融保險類指數 close for one date.
 
