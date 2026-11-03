@@ -343,16 +343,14 @@ async function loadAll(){
       }
       return best ? best.ForeignInvestmentSharesRatio : null;
     }
-    // 法人買賣超約 16:00 後才公告、FinMind 更晚；股價已出但法人未出的日期先不收，
-    // 避免把缺的法人資料當成 0（與主頁 update_daily.py 規則一致）
-    for(const p of priceRows){
-      const dt=p.date.replace(/-/g,'');
-      if(!instByDate[dt] && (!pendingDate || dt>pendingDate)) pendingDate=dt;
-    }
-    const days = priceRows.filter(p=>instByDate[p.date.replace(/-/g,'')]).map(p=>{
+    // 法人買賣超晚於收盤價公布：股價已出、法人未出的日期照樣收（收盤價／成交量／成交值即時），
+    // 但法人欄位設為 null（顯示「—」），不當成 0
+    const days = priceRows.map(p=>{
       const date = p.date.replace(/-/g,'');
-      const inst = instByDate[date];
-      return [date, p.close, p.Trading_Volume/1000, inst.fL, inst.tL, inst.dL, inst.totL, holdOnOrBefore(date),
+      const inst = instByDate[date] || {fL:null,tL:null,dL:null,totL:null};
+      if(!instByDate[date] && (!pendingDate || date>pendingDate)) pendingDate=date;
+      return [date, p.close, p.Trading_Volume/1000, inst.fL, inst.tL, inst.dL, inst.totL,
+              instByDate[date] ? holdOnOrBefore(date) : null,
               p.Trading_money!=null ? p.Trading_money/1e6 : null];
     }).sort((a,b)=>a[0].localeCompare(b[0]));
     HISTORY[code] = {name, days};
@@ -374,13 +372,14 @@ async function loadAll(){
     const base = filtered.length>period ? filtered[filtered.length-period-1] : filtered[0];
     const close = window[window.length-1][1];
     const pct = (close-base[1])/base[1]*100;
-    const sum = (idx)=>window.reduce((s,d)=>s+d[idx],0);
+    const instOk = window.every(d=>d[3]!=null);
+    const sum = (idx)=>instOk||idx===2 ? window.reduce((s,d)=>s+d[idx],0) : null;
     const fL=sum(3), tL=sum(4), dL=sum(5), totL=sum(6);
-    const fK=window.reduce((s,d)=>s+d[3]*d[1]/1000,0);
-    const tK=window.reduce((s,d)=>s+d[4]*d[1]/1000,0);
-    const dK=window.reduce((s,d)=>s+d[5]*d[1]/1000,0);
+    const ksum = (idx)=>instOk ? window.reduce((s,d)=>s+d[idx]*d[1]/1000,0) : null;
+    const fK=ksum(3), tK=ksum(4), dK=ksum(5);
     const amt=window.every(d=>d[8]!=null)?window.reduce((s,d)=>s+d[8],0):null; // 成交值（百萬元）
-    return {close,pct,vol:sum(2),amt,fL,tL,dL,totL,fK,tK,dK,totK:fK+tK+dK,fHold:window[window.length-1][7]};
+    const fHoldRow=[...filtered].reverse().find(d=>d[7]!=null);
+    return {close,pct,vol:sum(2),amt,fL,tL,dL,totL,fK,tK,dK,totK:instOk?fK+tK+dK:null,fHold:fHoldRow?fHoldRow[7]:null};
   }
 
   const all_results = [];
@@ -419,13 +418,33 @@ async function loadAll(){
   }
 
   return {HISTORY, DATA:{all_results, indexHistory}, obsRows, taiexPct, finPct, latestDate,
-          pendingDate: pendingDate && pendingDate>latestDate ? pendingDate : null};
+          pendingDate: pendingDate && pendingDate>=latestDate ? pendingDate : null};
 }
 
 // ══════════════════════════ 每日觀察文字產生 ══════════════════════════
 function obsFmtSigned(n){ if(n==null||isNaN(n))return'—';const r=Math.round(n);if(r===0)return'0';return(r>0?'+':'')+r.toLocaleString('en-US'); }
 function obsFmtPct(n){if(n==null||isNaN(n))return'—';return(n>0?'+':'')+n.toFixed(2)+'%';}
 function obsClsOf(n){if(n==null||isNaN(n)||n===0)return'neu';return n>0?'pos':'neg';}
+
+function buildPriceOnlyObservations(rows, taiexPct, finPct, results){
+  const events=[], judgement=[];
+  const leader = rows.reduce((a,b)=>b.pct>a.pct?b:a);
+  const laggard = rows.reduce((a,b)=>b.pct<a.pct?b:a);
+  events.push([obsClsOf(leader.pct), `<b class="${obsClsOf(leader.pct)}">${leader.name} ${obsFmtPct(leader.pct)}</b> 領漲`]);
+  events.push([obsClsOf(laggard.pct), `<b class="${obsClsOf(laggard.pct)}">${laggard.name} ${obsFmtPct(laggard.pct)}</b> 領跌`]);
+  const amts = results.filter(r=>r.p1&&r.p1.amt!=null);
+  if(amts.length){
+    const tot = amts.reduce((s,r)=>s+r.p1.amt,0);
+    const top = amts.reduce((a,b)=>b.p1.amt>a.p1.amt?b:a);
+    events.push(['neu', `13家金控成交值合計 <b>${Math.round(tot).toLocaleString('en-US')}</b> 百萬元，最大為 <b>${top.name}</b> ${Math.round(top.p1.amt).toLocaleString('en-US')} 百萬元`]);
+  }
+  const finStrength = finPct>taiexPct ? '相對強勢' : (finPct<taiexPct ? '相對弱勢' : '表現一致');
+  events.push(['neu', `當日加權指數 <b class="${obsClsOf(taiexPct)}">${obsFmtPct(taiexPct)}</b>、金融指數 <b class="${obsClsOf(finPct)}">${obsFmtPct(finPct)}</b> — 金融族群<b class="${obsClsOf(finPct-taiexPct)}">${finStrength}</b>`]);
+  const upCount = rows.filter(r=>r.pct>0).length, downCount = rows.filter(r=>r.pct<0).length;
+  judgement.push(['neu', `<span class="obs-label">族群表現</span>13 家中 <b class="pos">${upCount} 檔上漲</b>、<b class="neg">${downCount} 檔下跌</b>`]);
+  judgement.push(['neu', `<span class="obs-label">法人動向</span>今日法人買賣超尚未公布，公布後重新整理即會補上法人分析`]);
+  return {events, judgement};
+}
 
 function buildObservations(rows, taiexPct, finPct){
   const events=[], judgement=[];
@@ -520,10 +539,11 @@ function renderInst(period){
   const rows=DATA.all_results.map(r=>({code:r.code,name:r.name,m:r['p'+period]}));
   const sorted=sortRows(rows,st.sortKey,st.sortDir);
   const head='<thead><tr>'+cols.map(c=>thHtml(c[0],c[1],st)).join('')+'</tr></thead>';
-  let body='<tbody>'; let sumF=0,sumT=0,sumD=0,sumAll=0,sumAmt=0,amtOk=true;
+  let body='<tbody>'; let sumF=0,sumT=0,sumD=0,sumAll=0,sumAmt=0,amtOk=true,instOkSum=true;
   for(const r of sorted){
     const m=r.m;
     if(m.amt==null)amtOk=false;else sumAmt+=m.amt;
+    if(m.fL==null)instOkSum=false;
     if(isLots){
       sumF+=m.fL;sumT+=m.tL;sumD+=m.dL;sumAll+=m.totL;
       body+=`<tr><td><span class="code">${r.code}</span>${r.name}</td>
@@ -540,7 +560,7 @@ function renderInst(period){
         <td>${fmtPrice(m.close)}</td><td class="${clsOf(m.pct)}">${fmtPct(m.pct)}</td><td>${fmtInt(m.vol)}</td><td>${fmtAmt(m.amt)}</td></tr>`;
     }
   }
-  const sf=isLots?fmtSigned:fmtSignedDec;
+  const sf0=isLots?fmtSigned:fmtSignedDec; const sf=v=>instOkSum?sf0(v):'—';
   body+=`<tr class="sum"><td>13家合計</td><td></td><td class="${clsOf(sumF)}">${sf(sumF)}</td><td class="${clsOf(sumT)}">${sf(sumT)}</td><td class="${clsOf(sumD)}">${sf(sumD)}</td><td class="${clsOf(sumAll)}">${sf(sumAll)}</td><td colspan="3"></td><td>${amtOk?fmtAmt(sumAmt):'—'}</td></tr></tbody>`;
   document.getElementById('inst'+period).innerHTML=head+body;
   document.querySelectorAll('#inst'+period+' th').forEach(th=>{
@@ -603,10 +623,10 @@ function renderStockChart(code,startD,endD){
   const prices=days.map(d=>d[1]);
   const vols=days.map(d=>d[2]);
   const amts=days.map(d=>d[8]??null);
-  const fL=days.map(d=>d[3]||0);
-  const tL=days.map(d=>d[4]||0);
-  const dL=days.map(d=>d[5]||0);
-  const tot=days.map(d=>d[6]||0);
+  const fL=days.map(d=>d[3]??null);
+  const tL=days.map(d=>d[4]??null);
+  const dL=days.map(d=>d[5]??null);
+  const tot=days.map(d=>d[6]??null);
 
   const first=prices[0],last=prices[prices.length-1];
   const chgPct=((last-first)/first*100).toFixed(2);
@@ -688,10 +708,11 @@ async function boot(){
     const dateDisplay = `${result.latestDate.slice(0,4)}-${result.latestDate.slice(4,6)}-${result.latestDate.slice(6)}`;
     document.title = `13家金控 — 截至 ${dateDisplay}`;
     document.getElementById('datePill').textContent = `📅 最新交易日 ${dateDisplay}`+
-      (result.pendingDate?`（${result.pendingDate.slice(4,6)}/${result.pendingDate.slice(6)} 收盤價已出，法人買賣超 FinMind 尚未公布，晚點重新整理即可）`:'');
+      (result.pendingDate?`（收盤價／成交值已更新；法人買賣超尚未公布，公布後重新整理即可）`:'');
     document.getElementById('obsDateTag').textContent = dateDisplay;
 
-    const obs = buildObservations(result.obsRows, result.taiexPct, result.finPct);
+    const obs = result.pendingDate ? buildPriceOnlyObservations(result.obsRows, result.taiexPct, result.finPct, DATA.all_results)
+                                   : buildObservations(result.obsRows, result.taiexPct, result.finPct);
     document.getElementById('obsEvents').innerHTML = obs.events.map(([c,html])=>`<li class="${c}">${html}</li>`).join('');
     document.getElementById('obsJudgement').innerHTML = obs.judgement.map(([c,html])=>`<li class="${c}">${html}</li>`).join('');
 
