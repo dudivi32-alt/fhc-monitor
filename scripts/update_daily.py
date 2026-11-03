@@ -20,11 +20,27 @@ import common
 HISTORY_PATH = Path(__file__).resolve().parent.parent / "data" / "history_cmoney.json"
 
 history = json.loads(HISTORY_PATH.read_text(encoding="utf-8"))
+
+
+def backfill_fhold() -> None:
+    """回補最近幾天缺漏的外資持股比率（TWSE 20:00 後才公告，當天排程抓不到）。"""
+    for code, name in common.STOCKS:
+        days = history["stocks"][code]["days"]
+        for d in days[-4:]:
+            if d[7] is None:
+                rows = common.fetch_finmind("TaiwanStockShareholding", code,
+                                            f"{d[0][:4]}-{d[0][4:6]}-{d[0][6:]}")
+                for r in rows:
+                    if r["date"].replace("-", "") == d[0]:
+                        d[7] = round(r["ForeignInvestmentSharesRatio"], 2)
+                        print(f"  {code} fHold backfilled for {d[0]}")
+
 last_date = history["index"][-1]["d"]
 start = (dt.datetime.strptime(last_date, "%Y%m%d").date() + dt.timedelta(days=1))
 today = dt.date.today()
 if start > today:
     print("already up to date")
+    backfill_fhold()
     common.backfill_trading_value(history)
     HISTORY_PATH.write_text(json.dumps(history, ensure_ascii=False, indent=1), encoding="utf-8")
     sys.exit(0)
@@ -60,16 +76,7 @@ for code, name in common.STOCKS:
     print(f"  {code} {name}: +{len([d for d in days if d[0] in added_dates])} new")
 
 # 回補最近幾天缺漏的外資持股比率（TWSE 20:00 後才公告，18:00 排程當天抓不到）
-for code, name in common.STOCKS:
-    days = history["stocks"][code]["days"]
-    for d in days[-4:]:
-        if d[7] is None:
-            rows = common.fetch_finmind("TaiwanStockShareholding", code,
-                                        f"{d[0][:4]}-{d[0][4:6]}-{d[0][6:]}")
-            for r in rows:
-                if r["date"].replace("-", "") == d[0]:
-                    d[7] = round(r["ForeignInvestmentSharesRatio"], 2)
-                    print(f"  {code} fHold backfilled for {d[0]}")
+backfill_fhold()
 
 # 指數：TWSE MI_INDEX 逐日
 d = start
